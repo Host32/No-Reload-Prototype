@@ -1,4 +1,4 @@
-(function(NR, $, Handlebars) {
+(function(NR, $) {
     NR.prompt = (function() {
         var promptPrefix = 'jqismooth';
         var promptQuestionPrefix = 'jqismooth';
@@ -32,4 +32,4 @@
             }
         };
     })();
-})(NoReload, jQuery, Handlebars);
+})(NoReload, jQuery);
