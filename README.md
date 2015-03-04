@@ -35,15 +35,16 @@ Full AJAX javascript framework
     NR.prompt.show("ERROR");
   });
   
-	// create a new state
-	NR.registerState('home', function(response){
+  // create a new state
+  NR.registerState('home', function(response){
     // when this state has be loaded, an ajax request will be sent to the server
     // the response object is the server response
     
-      NR.template.compile($('body'), 'home', response);
+    // compile( 'target element', 'template name', 'template data' )
+    NR.template.compile($('body'), 'home', response);
   });
-	
-	// load the state
+  
+  // load the state 
   NR.loadState('home');
   
   // bind loadstate on hash change
