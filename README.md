@@ -44,8 +44,11 @@ Full AJAX javascript framework
     NR.template.compile($('body'), 'home', response);
   });
   
-  // load the state 
-  NR.loadState('home');
+  // set home as our initial state
+  NR.setInitialState('home');
+  
+  // load the initial state 
+  NR.loadState();
   
   // bind loadstate on hash change
   $(window).on('hashchange', function() {
