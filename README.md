@@ -64,10 +64,10 @@ Full AJAX javascript framework
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-	<title>No-Reload Sample</title>
-	<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
-	
-	<script type="text/javascript" src="JS/jquery.js"></script>
+  <title>No-Reload Sample</title>
+  <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+  
+  <script type="text/javascript" src="JS/jquery.js"></script>
   <script type="text/javascript" src="JS/prompt.js"></script>
   <script type="text/javascript" src="JS/handlebars-v3.0.0.js"></script>
   <script type="text/javascript" src="JS/no-reload/no-reload-core.js"></script>
