@@ -79,6 +79,12 @@ var NoReload = (function($) {
         preLoad: preLoad,
         posLoad: posLoad,
         ajax: ajax,
+        startAnchorNavigation: function(){
+            $(window).on('hashchange', function() {
+                var name = location.hash.replace(/^#/, '');
+                this.loadState(name);
+            });
+        },
         registerState: function(name, state, isAjax) {
             isAjax = utils.defaultValue(isAjax, true);
 
