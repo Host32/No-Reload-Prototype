@@ -19,7 +19,7 @@
         return {
             loadTemplate: function(name, callback) {
                 if (typeof templates[name] === 'undefined') {
-                    NR.ajax({
+                    $.ajax({
                         url: formatTemplateUrl(name),
                         contentType: "text/html",
                         dataType: "html",
