@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <script>
+        var PATH_REGEXP = new RegExp([
+        '(\\\\.)',
+        '([\\/.])?(?:\\:(\\w+)(?:\\(((?:\\\\.|[^)])*)\\))?|\\(((?:\\\\.|[^)])*)\\))([+*?])?',
+        '([.+*?=^!:${}()[\\]|\\/])'
+      ].join('|'), 'g');
+/**
+ * Escape the capturing group by escaping special characters and meaning.
+ *
+ * @param  {String} group
+ * @return {String}
+ */
+function escapeGroup (group) {
+  return group.replace(/([=!:$\/()])/g, '\\$1');
+}
+
+/**
+ * Normalize the given path string, returning a regular expression.
+ *
+ * An empty array should be passed in, which will contain the placeholder key
+ * names. For example `/user/:id` will then contain `["id"]`.
+ *
+ * @param  {(String|RegExp|Array)} path
+ * @param  {Array}                 keys
+ * @param  {Object}                options
+ * @return {RegExp}
+ */
+function pathtoRegexp (path) {
+    var keys = [];
+    var index = 0;
+    
+  // Alter the path string into a usable regexp.
+  path = path.replace(PATH_REGEXP, function (match, escaped, prefix, key, capture, group, suffix, escape) {
+    // Avoiding re-escaping escaped characters.
+    if (escaped) {
+      return escaped;
+    }
+
+    // Escape regexp special characters.
+    if (escape) {
+      return '\\' + escape;
+    }
+
+    var repeat   = suffix === '+' || suffix === '*';
+    var optional = suffix === '?' || suffix === '*';
+    
+    keys.push({
+      name:      key || index++,
+      delimiter: prefix || '/',
+      optional:  optional,
+      repeat:    repeat
+    });
+    
+    // Escape the prefix character.
+    prefix = prefix ? '\\' + prefix : '';
+
+    // Match using the custom capturing group, or fallback to capturing
+    // everything up to the next slash (or next period if the param was
+    // prefixed with a period).
+    capture = escapeGroup(capture || group || '[^' + (prefix || '\\/') + ']+?');
+
+    // Allow parameters to be repeated more than once.
+    if (repeat) {
+      capture = capture + '(?:' + prefix + capture + ')*';
+    }
+
+    // Allow a parameter to be optional.
+    if (optional) {
+      return '(?:' + prefix + '(' + capture + '))?';
+    }
+
+    // Basic parameter support.
+    return prefix + '(' + capture + ')';
+  });
+  console.log(keys);
+
+  return new RegExp('^' + path + '$');
+};
+
+console.log('home/teste/2/3'.match(pathtoRegexp('home/teste/:id/:oi/:2?')));
+    </script>
+    <body>
+        <div>TODO write content</div>
+    </body>
+</html>
