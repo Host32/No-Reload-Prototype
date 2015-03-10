@@ -91,6 +91,7 @@ var NoReload = (function($) {
             controllerFunc(params);
         },
         getControllerFunc: function(name){
+            var c = this;
             return function(params) {
                 var names = name.split(';');
                 for (var key in names) {
@@ -98,9 +99,9 @@ var NoReload = (function($) {
                     var controllerName = name[0];
                     var funcName = name[1];
 
-                    if (typeof this.registredControllers[controllerName] !== 'undefined' && 
-                            typeof this.registredControllers[controllerName][funcName] !== 'undefined') {
-                        this.registredControllers[controllerName][funcName](params);
+                    if (typeof c.registredControllers[controllerName] !== 'undefined' && 
+                            typeof c.registredControllers[controllerName][funcName] !== 'undefined') {
+                        c.registredControllers[controllerName][funcName](params);
                     }
                 }
             };
