@@ -35,25 +35,25 @@ Full AJAX javascript framework
     NR.prompt.show("ERROR");
   });
   
-  // create a new state
-  NR.registerState('home', function(response){
-    // when this state has be loaded, an ajax request will be sent to the server
+  // create a new route
+  NR.registerRoute('home', function(response){
+    // when this route has be loaded, an ajax request will be sent to the server
     // the response object is the server response
     
     // compile( 'target element', 'template name', 'template data' )
     NR.template.compile($('body'), 'home', response);
   });
   
-  // set home as our initial state
-  NR.setInitialState('home');
+  // set home as our initial route
+  NR.setInitialRoute('home');
   
-  // load the initial state 
-  NR.loadState();
+  // load the initial Route 
+  NR.load();
   
   // bind loadstate on hash change
   $(window).on('hashchange', function() {
     var name = location.hash.replace( /^#/, '' );
-    NR.loadState(name);
+    NR.load(name);
   });
 })(jQuery, NoReload);
 
