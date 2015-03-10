@@ -23,6 +23,7 @@
                         url: formatTemplateUrl(name),
                         contentType: "text/html",
                         dataType: "html",
+                        cache: true,
                         success: function(template) {
                             templates[name] = Handlebars.compile(template);
                             callback(templates[name]);

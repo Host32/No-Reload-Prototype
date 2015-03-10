@@ -59,27 +59,22 @@ var NoReload = (function($) {
             $.ajax({
                 type: method,
                 url: url,
-                success: success
+                success: success,
+                cache: false,
+                contentType: "application/json",
+                dataType: "json",
+                beforeSend: function() {
+                    preLoad();
+                },
+                complete: function() {
+                    posLoad();
+                },
+                error: function(params) {
+                    ajax.defaultErrorFunction(params);
+                }
             });
         }
     };
-
-    $.ajaxSetup({
-        url: serverAddress,
-        cache: false,
-        contentType: "application/json",
-        dataType: "json",
-        global: false,
-        beforeSend: function() {
-            preLoad();
-        },
-        complete: function() {
-            posLoad();
-        },
-        error: function(params) {
-            ajax.defaultErrorFunction(params);
-        }
-    });
 
     var controllers = {
         registredControllers: {},
@@ -114,22 +109,22 @@ var NoReload = (function($) {
 
     var routes = {
         registredRoutes: {},
-        registerRoute: function(route, controllers, isAjax){
+        registerRoute: function(route, controller, isAjax){
             isAjax = utils.defaultValue(isAjax, true);
             var routeReg = this.pathtoRegexp(route);
-            registredRoutes[route] = {
+            this.registredRoutes[route] = {
                 regExp: routeReg.regExp,
                 routeParams: routeReg.keys,
-                controllers: controllers,
+                controller: controller,
                 isAjax: isAjax
             };
         },
         find: function(route){
-            for(var route in this.registredRoutes){
-                var regExp = this.registredRoutes[route].regExp;
+            for(var key in this.registredRoutes){
+                var regExp = this.registredRoutes[key].regExp;
                 if(regExp.test(route)){
                     return {
-                        definition: this.registredRoutes[route],
+                        definition: this.registredRoutes[key],
                         matches: route.match(regExp)
                     };
                 }
@@ -159,10 +154,10 @@ var NoReload = (function($) {
                 var optional = suffix === '?' || suffix === '*';
     
                 keys.push({
-                  name:      key || index++,
-                  delimiter: prefix || '/',
-                  optional:  optional,
-                  repeat:    repeat
+                    name:      key || index++,
+                    delimiter: prefix || '/',
+                    optional:  optional,
+                    repeat:    repeat
                 });
 
                 // Escape the prefix character.
@@ -204,7 +199,7 @@ var NoReload = (function($) {
         startAnchorNavigation: function() {
             $(window).on('hashchange', function() {
                 var name = location.hash.replace(/^#/, '');
-                this.loadState(name);
+                this.load(name);
             });
         },
         registerRoute: function(name, controller, isAjax) {
@@ -229,16 +224,16 @@ var NoReload = (function($) {
             delete preLoadEvents[name];
         },
         load: function(route, params) {
-            route = routes.find(route);
+            var routeDef = routes.find(route);
             var NR = this;
-            if(route){
-                if(route.isAjax && typeof params === 'undefined'){
+            if(routeDef){
+                if(routeDef.definition.isAjax && typeof params === 'undefined'){
                     ajax.run('get', route, function(response){
-                        NR.safeCallControllers(route.definition.controllers, response);
+                        NR.safeCallControllers(routeDef.definition.controller, response);
                     });
                 }
                 else{
-                    NR.safeCallControllers(route.definition.controllers, params);
+                    NR.safeCallControllers(routeDef.definition.controller, params);
                 }
                 lastRoute = route;
             }
@@ -249,9 +244,9 @@ var NoReload = (function($) {
                 throw "the route '"+ route+"' has not yet been registered";
             }
         },
-        safeCallControllers: function(controllers, params){
+        safeCallControllers: function(controller, params){
             if(controllers.defaultResponseProcessor(params)){
-                controllers.call(controllers, params);
+                controllers.call(controller, params);
             }
         },
         send: function(type, location, data, callback, reload) {
@@ -260,10 +255,12 @@ var NoReload = (function($) {
 
             $.ajax({
                 type: type,
-                url: ajax.formatUrlformatUrl(location),
+                url: ajax.formatUrl(location),
                 data: data,
+                contentType: "application/json",
+                dataType: "json",
                 success: function(response) {
-                    if (defaultResponseProcessor(response)) {
+                    if (controllers.defaultResponseProcessor(response)) {
                         if (callback) {
                             NR.safeCallControllers(callback, response);
                         }
@@ -299,3 +296,5 @@ var NoReload = (function($) {
 
     return __export__;
 })(jQuery);
+
+var NR = NoReload;
