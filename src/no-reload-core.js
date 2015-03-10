@@ -138,6 +138,8 @@ var NoReload = (function($) {
             var keys = [];
             var index = 0;
             
+            var r = this;
+            
             // Alter the path string into a usable regexp.
             path = path.replace(PATH_REGEXP, function(match, escaped, prefix, key, capture, group, suffix, escape) {
                 // Avoiding re-escaping escaped characters.
@@ -166,7 +168,7 @@ var NoReload = (function($) {
                 // Match using the custom capturing group, or fallback to capturing
                 // everything up to the next slash (or next period if the param was
                 // prefixed with a period).
-                capture = this.escapeGroup(capture || group || '[^' + (prefix || '\\/') + ']+?');
+                capture = r.escapeGroup(capture || group || '[^' + (prefix || '\\/') + ']+?');
 
                 // Allow parameters to be repeated more than once.
                 if (repeat) {
