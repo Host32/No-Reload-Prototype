@@ -245,32 +245,29 @@ var NoReload = (function($) {
             else if (routes.find(initialRoute)) {
                 NR.loadState(initialRoute);
             }
+            else{
+                throw "the route '"+ route+"' has not yet been registered";
+            }
         },
         safeCallControllers: function(controllers, params){
             if(controllers.defaultResponseProcessor(params)){
                 controllers.call(controllers, params);
             }
         },
-        send: function(options) {
-            var defaultOptions = {
-                location: '',
-                data: '',
-                callback: false,
-                type: 'get',
-                reload: false
-            };
-            options = utils.objectMerge(defaultOptions, options);
+        send: function(type, location, data, callback, reload) {
+            callback = utils.defaultValue(callback, false);
+            reload = utils.defaultValue(reload, false);
 
             $.ajax({
-                type: options.type,
-                url: ajax.formatUrlformatUrl(options.location),
-                data: options.data,
+                type: type,
+                url: ajax.formatUrlformatUrl(location),
+                data: data,
                 success: function(response) {
                     if (defaultResponseProcessor(response)) {
-                        if (options.callback) {
-                            NR.safeCallControllers(options.callback, response);
+                        if (callback) {
+                            NR.safeCallControllers(callback, response);
                         }
-                        if (options.reload) {
+                        if (reload) {
                             NR.load(lastRoute, response);
                         }
                     }
