@@ -2,24 +2,6 @@
     NR.form = (function() {
         var formSeletor = 'form';
         
-        var getFormOptions = function($form) {
-            var opt = {
-                location: $form.attr('action'),
-                data: $form.serialize()
-            };
-
-            if (typeof $form.attr('callback') !== 'undefined') 
-                opt['callback'] = $form.attr('callback');
-            if (typeof $form.attr('reload') !== 'undefined') 
-                opt['reload'] = $form.attr('reload') === 'true';
-            if (typeof $form.attr('method') !== 'undefined') 
-                opt['type'] = $form.attr('method');
-            if (typeof $form.attr('question') !== 'undefined') 
-                opt['question'] = $form.attr('question');
-
-            return opt;
-        };
-        
         var __export__ = {
             bind: function(seletor){
                 $(document).off('submit', formSeletor);
@@ -28,16 +10,22 @@
                 
                 $(document).on('submit', formSeletor, function(e) {
                     e.preventDefault();
-
-                    var formOpt = getFormOptions($(this));
-
-                    if (typeof formOpt.question !== 'undefined') {
-                        NR.prompt.showQuestion(formOpt.question, function() {
-                            NR.send(formOpt);
+                    
+                    var location = $(this).attr('action');
+                    var data = $(this).serialize();
+                    
+                    var callback = NR.utils.defaultValue($(this).attr('callback'), false);
+                    var reload = NR.utils.defaultValue($(this).attr('reload'), false);
+                    var method = NR.utils.defaultValue($(this).attr('method'), false);
+                    var question = NR.utils.defaultValue($(this).attr('question'), false);
+                    
+                    if (question) {
+                        NR.prompt.showQuestion(question, function() {
+                            NR.send(method, location, data, callback, reload);
                         });
                     }
                     else {
-                        NR.send(formOpt);
+                        NR.send(method, location, data, callback, reload);
                     }
                 });
             },
