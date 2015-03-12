@@ -193,7 +193,7 @@ var NoReload = (function($) {
     };
     
     function isAjax(routeDef, params){
-        return routeDef.definition.isAjax && (selectedReloadPolicy === this.reloadPolicy.NEW_REQUEST || typeof params === 'undefined');
+        return routeDef.definition.isAjax && (selectedReloadPolicy === reloadPolicy.NEW_REQUEST || typeof params === 'undefined');
     }
 
     var __export__ = {
