@@ -14,8 +14,10 @@
                     var location = $(this).attr('action');
                     var data = $(this).serialize();
                     
+                    var reload = $(this).attr('reload');
+                    reload = typeof reload === 'undefined' || reload.toLowerCase() === 'false' ? false : (reload.toLowerCase() === 'true' ? true : reload);
+                    
                     var callback = NR.utils.defaultValue($(this).attr('callback'), false);
-                    var reload = NR.utils.defaultValue($(this).attr('reload'), false);
                     var method = NR.utils.defaultValue($(this).attr('method'), false);
                     var question = NR.utils.defaultValue($(this).attr('question'), false);
                     

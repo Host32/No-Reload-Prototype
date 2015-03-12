@@ -2,6 +2,12 @@ var NoReload = (function($) {
     var serverAddress = '';
     var initialRoute = 'home';
     var lastRoute = initialRoute;
+    
+    var reloadPolicy = {
+        USE_RESPONSE: 0,
+        NEW_REQUEST: 1
+    };
+    var selectedReloadPolicy = 0;
 
     var preLoadEvents = {};
     var posLoadEvents = {};
@@ -44,18 +50,16 @@ var NoReload = (function($) {
     
     var ajax = {
         formatUrl: function(location) {
-            var loc = location.split('/');
-            var formatedLocation = 'c=' + loc[0];
-            if (loc.length > 1) {
-                formatedLocation += '&m=' + loc[1];
-            }
-            return serverAddress + '?' + formatedLocation;
+            return serverAddress + location;
         },
         defaultErrorFunction: function() {
             throw "Ajax Error";
         },
+        beforeSend: function(){},
+        complete: function(){},
         run: function(method, url, success) {
             url = this.formatUrl(url);
+            var a = this;
             $.ajax({
                 type: method,
                 url: url,
@@ -63,12 +67,8 @@ var NoReload = (function($) {
                 cache: false,
                 contentType: "application/json",
                 dataType: "json",
-                beforeSend: function() {
-                    preLoad();
-                },
-                complete: function() {
-                    posLoad();
-                },
+                beforeSend: a.beforeSend,
+                complete: a.complete,
                 error: function(params) {
                     ajax.defaultErrorFunction(params);
                 }
@@ -191,8 +191,13 @@ var NoReload = (function($) {
             };
         }
     };
+    
+    function isAjax(routeDef, params){
+        return routeDef.definition.isAjax && (selectedReloadPolicy === this.reloadPolicy.NEW_REQUEST || typeof params === 'undefined');
+    }
 
     var __export__ = {
+        reloadPolicy: reloadPolicy,
         preLoad: preLoad,
         posLoad: posLoad,
         utils: utils,
@@ -230,13 +235,13 @@ var NoReload = (function($) {
             var routeDef = routes.find(route);
             var NR = this;
             if(routeDef){
-                if(routeDef.definition.isAjax && typeof params === 'undefined'){
+                if(isAjax(routeDef, params)){
                     ajax.run('get', route, function(response){
-                        NR.safeCallControllers(routeDef.definition.controller, response);
+                        NR.safeCallControllersWithLoad(routeDef.definition.controller, response);
                     });
                 }
                 else{
-                    NR.safeCallControllers(routeDef.definition.controller, params);
+                    NR.safeCallControllersWithLoad(routeDef.definition.controller, params);
                 }
                 lastRoute = route;
             }
@@ -246,6 +251,11 @@ var NoReload = (function($) {
             else{
                 throw "the route '"+ route+"' has not yet been registered";
             }
+        },
+        safeCallControllersWithLoad: function(controller, params){
+            this.preLoad();
+            this.safeCallControllers(controller, params);
+            this.posLoad();
         },
         safeCallControllers: function(controller, params){
             if(controllers.defaultResponseProcessor(params)){
@@ -262,13 +272,18 @@ var NoReload = (function($) {
                 data: data,
                 contentType: "application/json",
                 dataType: "json",
+                beforeSend: ajax.beforeSend,
+                complete: ajax.complete,
                 success: function(response) {
                     if (controllers.defaultResponseProcessor(response)) {
                         if (callback) {
                             NR.safeCallControllers(callback, response);
                         }
-                        if (reload) {
+                        if (reload === true) {
                             NR.load(lastRoute, response);
+                        }
+                        else if(reload){
+                            NR.load(reload, response);
                         }
                     }
                 }
@@ -294,6 +309,9 @@ var NoReload = (function($) {
         },
         setInitialRoute: function(state) {
             initialRoute = state;
+        },
+        setReloadPolicy: function(policy){
+            selectedReloadPolicy = policy;
         }
     };
 
