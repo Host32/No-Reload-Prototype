@@ -16,7 +16,13 @@
         
         var validations = {
             required: function(value){
-                return typeof value !== 'undefined' && value !== false && value !== null && value.length > 0;
+                if(typeof value === 'string'){
+                    if(value.toLowerCase() === 'true') value = true;
+                    else if(value.toLowerCase() === 'false') value = false;
+                    else return value.length > 0;
+                }
+                
+                return typeof value !== 'undefined' && value !== false && value !== null;
             },
             matches: function(value, seletor){
                 return value == $(seletor).val();
