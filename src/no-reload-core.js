@@ -20,9 +20,6 @@ var NoReload = (function($) {
     ].join('|'), 'g');
 
     var utils = {
-        defaultValue: function(original, dft) {
-            return typeof original !== 'undefined' ? original : dft;
-        },
         objectMerge: function(ob1, ob2) {
             for (var key in ob2) {
                 ob1[key] = ob2[key];
@@ -111,7 +108,9 @@ var NoReload = (function($) {
     var routes = {
         registredRoutes: {},
         registerRoute: function(route, controller, isAjax){
-            isAjax = utils.defaultValue(isAjax, true);
+            if(typeof isAjax === 'undefined' )
+                isAjax = true;
+            
             var routeReg = this.pathtoRegexp(route);
             this.registredRoutes[route] = {
                 regExp: routeReg.regExp,
@@ -263,8 +262,8 @@ var NoReload = (function($) {
             }
         },
         send: function(type, location, data, callback, reload) {
-            callback = utils.defaultValue(callback, false);
-            reload = utils.defaultValue(reload, false);
+            callback = callback || false;
+            reload = reload || false;
 
             $.ajax({
                 type: type,

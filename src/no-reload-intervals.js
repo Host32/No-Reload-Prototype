@@ -4,7 +4,7 @@
 
         var __export__ = {
             register: function(name, func, time, cleanable) {
-                cleanable = NR.utils.defaultValue(cleanable, true);
+                cleanable = cleanable || true;
                 intervals[name] = {
                     interval: setInterval(func, time),
                     cleanable: cleanable

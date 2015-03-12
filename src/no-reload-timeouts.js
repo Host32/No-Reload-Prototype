@@ -4,7 +4,9 @@
 
         var __export__ = {
             register: function(name, func, time, cleanable) {
-                cleanable = NR.utils.defaultValue(cleanable, true);
+                if(typeof cleanable === 'undefined' )
+                    cleanable = true;
+                
                 timeouts[name] = {
                     timeout: setTimeout(func, time),
                     cleanable: cleanable
