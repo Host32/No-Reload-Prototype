@@ -4,7 +4,9 @@
 
         var __export__ = {
             register: function(name, func, time, cleanable) {
-                cleanable = cleanable || true;
+                if(typeof cleanable === 'undefined' )
+                    cleanable = true;
+                
                 intervals[name] = {
                     interval: setInterval(func, time),
                     cleanable: cleanable
