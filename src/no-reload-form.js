@@ -16,7 +16,7 @@
         
         var validations = {
             required: function(value){
-                return typeof value !== 'undefined' && value.length > 0;
+                return typeof value !== 'undefined' && value !== false && value !== null && value.length > 0;
             },
             matches: function(value, seletor){
                 return value == $(seletor).val();
@@ -139,8 +139,10 @@
                         var params = aRules[key].match(RULE_PARAM_EXP);
                         var param = params !== null ? params[0].replace('[','').replace(']','') : null;
                         var rule = aRules[key].replace(RULE_PARAM_EXP, '');
+                        
+                        var value = $field.attr('type') === 'checkbox' ? $field.prop('checked') : $field.val();
 
-                        if(!this.validate(rule, $field.val(), param)){
+                        if(!this.validate(rule, value, param)){
                             validationErrorMessage = validationErrors[defaultLanguage][rule]
                                     .replace('$1', $field.attr('validation-name'))
                                     .replace('$2', param);
