@@ -1,3 +1,4 @@
+QUnit.module( "Form Validate" );
 QUnit.test( "validate required", function( assert ) {
     assert.ok( NR.form.validate('required', 'qualquer coisa', ''), "Diferent of undefined" );
     assert.ok( !NR.form.validate('required'), "undefined test" );
