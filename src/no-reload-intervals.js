@@ -1,22 +1,22 @@
-(function(NR) {
-    NR.intervals = (function() {
+(function (NR) {
+    NR.intervals = (function () {
         var intervals = {};
 
         var __export__ = {
-            register: function(name, func, time, cleanable) {
-                if(typeof cleanable === 'undefined' )
+            register: function (name, func, time, cleanable) {
+                if (typeof cleanable === 'undefined')
                     cleanable = true;
-                
+
                 intervals[name] = {
                     interval: setInterval(func, time),
                     cleanable: cleanable
                 };
             },
-            clear: function(name) {
+            clear: function (name) {
                 if (typeof intervals[name] !== 'undefined')
                     clearInterval(intervals[name].interval);
             },
-            clearAll: function() {
+            clearAll: function () {
                 for (var key in intervals) {
                     if (intervals[key].cleanable)
                         clearInterval(intervals[key].interval);

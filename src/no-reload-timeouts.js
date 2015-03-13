@@ -1,22 +1,22 @@
-(function(NR) {
-    NR.timeouts = (function() {
+(function (NR) {
+    NR.timeouts = (function () {
         var timeouts = {};
 
         var __export__ = {
-            register: function(name, func, time, cleanable) {
-                if(typeof cleanable === 'undefined' )
+            register: function (name, func, time, cleanable) {
+                if (typeof cleanable === 'undefined')
                     cleanable = true;
-                
+
                 timeouts[name] = {
                     timeout: setTimeout(func, time),
                     cleanable: cleanable
                 };
             },
-            clear: function(name) {
+            clear: function (name) {
                 if (typeof timeouts[name] !== 'undefined')
                     clearTimeout(timeouts[name].timeout);
             },
-            clearAll: function() {
+            clearAll: function () {
                 for (var key in timeouts) {
                     if (timeouts[key].cleanable)
                         clearTimeout(timeouts[key].timeout);

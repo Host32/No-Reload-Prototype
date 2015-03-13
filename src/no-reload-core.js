@@ -1,8 +1,8 @@
-var NoReload = (function($) {
+var NoReload = (function ($) {
     var serverAddress = '';
     var initialRoute = 'home';
     var lastRoute = initialRoute;
-    
+
     var reloadPolicy = {
         USE_RESPONSE: 0,
         NEW_REQUEST: 1
@@ -11,7 +11,7 @@ var NoReload = (function($) {
 
     var preLoadEvents = {};
     var posLoadEvents = {};
-    
+
     // The main path matching regexp utility.
     var PATH_REGEXP = new RegExp([
         '(\\\\.)',
@@ -20,13 +20,13 @@ var NoReload = (function($) {
     ].join('|'), 'g');
 
     var utils = {
-        objectMerge: function(ob1, ob2) {
+        objectMerge: function (ob1, ob2) {
             for (var key in ob2) {
                 ob1[key] = ob2[key];
             }
             return ob1;
         },
-        convertResponse: function(response) {
+        convertResponse: function (response) {
             if (typeof response === 'string')
                 response = JSON.parse(response);
 
@@ -34,27 +34,27 @@ var NoReload = (function($) {
         }
     };
 
-    var preLoad = function() {
+    var preLoad = function () {
         for (var key in preLoadEvents) {
             preLoadEvents[key]();
         }
     };
-    var posLoad = function() {
+    var posLoad = function () {
         for (var key in posLoadEvents) {
             posLoadEvents[key]();
         }
     };
-    
+
     var ajax = {
-        formatUrl: function(location) {
+        formatUrl: function (location) {
             return serverAddress + location;
         },
-        defaultErrorFunction: function() {
+        defaultErrorFunction: function () {
             throw "Ajax Error";
         },
-        beforeSend: function(){},
-        complete: function(){},
-        run: function(method, url, success) {
+        beforeSend: function () {},
+        complete: function () {},
+        run: function (method, url, success) {
             url = this.formatUrl(url);
             var a = this;
             $.ajax({
@@ -66,7 +66,7 @@ var NoReload = (function($) {
                 dataType: "json",
                 beforeSend: a.beforeSend,
                 complete: a.complete,
-                error: function(params) {
+                error: function (params) {
                     ajax.defaultErrorFunction(params);
                 }
             });
@@ -75,29 +75,29 @@ var NoReload = (function($) {
 
     var controllers = {
         registredControllers: {},
-        registerController: function(name, controller){
+        registerController: function (name, controller) {
             this.registredControllers[name] = controller;
         },
-        defaultResponseProcessor: function() {
+        defaultResponseProcessor: function () {
             return true;
         },
-        call: function(controllerFunc, params){
+        call: function (controllerFunc, params) {
             if (typeof controllerFunc === 'string')
                 controllerFunc = this.getControllerFunc(controllerFunc);
 
             controllerFunc(params);
         },
-        getControllerFunc: function(name){
+        getControllerFunc: function (name) {
             var c = this;
-            return function(params) {
+            return function (params) {
                 var names = name.split(';');
                 for (var key in names) {
                     name = names[key].split('.');
                     var controllerName = name[0];
                     var funcName = name[1];
 
-                    if (typeof c.registredControllers[controllerName] !== 'undefined' && 
-                            typeof c.registredControllers[controllerName][funcName] !== 'undefined') {
+                    if (typeof c.registredControllers[controllerName] !== 'undefined' &&
+                        typeof c.registredControllers[controllerName][funcName] !== 'undefined') {
                         c.registredControllers[controllerName][funcName](params);
                     }
                 }
@@ -107,10 +107,10 @@ var NoReload = (function($) {
 
     var routes = {
         registredRoutes: {},
-        registerRoute: function(route, controller, isAjax){
-            if(typeof isAjax === 'undefined' )
+        registerRoute: function (route, controller, isAjax) {
+            if (typeof isAjax === 'undefined')
                 isAjax = true;
-            
+
             var routeReg = this.pathtoRegexp(route);
             this.registredRoutes[route] = {
                 regExp: routeReg.regExp,
@@ -119,10 +119,10 @@ var NoReload = (function($) {
                 isAjax: isAjax
             };
         },
-        find: function(route){
-            for(var key in this.registredRoutes){
+        find: function (route) {
+            for (var key in this.registredRoutes) {
                 var regExp = this.registredRoutes[key].regExp;
-                if(regExp.test(route)){
+                if (regExp.test(route)) {
                     return {
                         definition: this.registredRoutes[key],
                         matches: route.match(regExp)
@@ -131,17 +131,17 @@ var NoReload = (function($) {
             }
             return false;
         },
-        escapeGroup: function(group) {
+        escapeGroup: function (group) {
             return group.replace(/([=!:$\/()])/g, '\\$1');
         },
-        pathtoRegexp: function(path) {
+        pathtoRegexp: function (path) {
             var keys = [];
             var index = 0;
-            
+
             var r = this;
-            
+
             // Alter the path string into a usable regexp.
-            path = path.replace(PATH_REGEXP, function(match, escaped, prefix, key, capture, group, suffix, escape) {
+            path = path.replace(PATH_REGEXP, function (match, escaped, prefix, key, capture, group, suffix, escape) {
                 // Avoiding re-escaping escaped characters.
                 if (escaped) {
                     return escaped;
@@ -154,12 +154,12 @@ var NoReload = (function($) {
 
                 var repeat = suffix === '+' || suffix === '*';
                 var optional = suffix === '?' || suffix === '*';
-    
+
                 keys.push({
-                    name:      key || index++,
+                    name: key || index++,
                     delimiter: prefix || '/',
-                    optional:  optional,
-                    repeat:    repeat
+                    optional: optional,
+                    repeat: repeat
                 });
 
                 // Escape the prefix character.
@@ -190,8 +190,8 @@ var NoReload = (function($) {
             };
         }
     };
-    
-    function isAjax(routeDef, params){
+
+    function isAjax(routeDef, params) {
         return routeDef.definition.isAjax && (selectedReloadPolicy === reloadPolicy.NEW_REQUEST || typeof params === 'undefined');
     }
 
@@ -203,65 +203,62 @@ var NoReload = (function($) {
         ajax: ajax,
         controllers: controllers,
         routes: routes,
-        startAnchorNavigation: function() {
-            $(window).on('hashchange', function() {
+        startAnchorNavigation: function () {
+            $(window).on('hashchange', function () {
                 var name = location.hash.replace(/^#/, '');
                 this.load(name);
             });
         },
-        registerRoute: function(name, controller, isAjax) {
+        registerRoute: function (name, controller, isAjax) {
             routes.registerRoute(name, controller, isAjax);
         },
-        isRegistredRoute: function(name) {
+        isRegistredRoute: function (name) {
             return routes.find(name) !== false;
         },
-        registerController: function(name, controller) {
+        registerController: function (name, controller) {
             controllers.registerController(name, controller);
         },
-        registerPreLoadEvent: function(name, event) {
+        registerPreLoadEvent: function (name, event) {
             preLoadEvents[name] = event;
         },
-        unregisterPreLoadEvent: function(name) {
+        unregisterPreLoadEvent: function (name) {
             delete preLoadEvents[name];
         },
-        registerPosLoadEvent: function(name, event) {
+        registerPosLoadEvent: function (name, event) {
             posLoadEvents[name] = event;
         },
-        unregisterPosLoadEvent: function(name) {
+        unregisterPosLoadEvent: function (name) {
             delete preLoadEvents[name];
         },
-        load: function(route, params) {
+        load: function (route, params) {
             var routeDef = routes.find(route);
             var NR = this;
-            if(routeDef){
-                if(isAjax(routeDef, params)){
-                    ajax.run('get', route, function(response){
+            if (routeDef) {
+                if (isAjax(routeDef, params)) {
+                    ajax.run('get', route, function (response) {
                         NR.safeCallControllersWithLoad(routeDef.definition.controller, response);
                     });
-                }
-                else{
+                } else {
                     NR.safeCallControllersWithLoad(routeDef.definition.controller, params);
                 }
                 lastRoute = route;
-            }
-            else if (routes.find(initialRoute)) {
+            } else if (routes.find(initialRoute)) {
                 NR.loadState(initialRoute);
-            }
-            else{
-                throw "the route '"+ route+"' has not yet been registered";
+            } else {
+                throw "the route '" + route + "' has not yet been registered";
             }
         },
-        safeCallControllersWithLoad: function(controller, params){
+        safeCallControllersWithLoad: function (controller, params) {
             this.preLoad();
             this.safeCallControllers(controller, params);
             this.posLoad();
         },
-        safeCallControllers: function(controller, params){
-            if(controllers.defaultResponseProcessor(params)){
+        safeCallControllers: function (controller, params) {
+            if (controllers.defaultResponseProcessor(params)) {
                 controllers.call(controller, params);
             }
         },
-        send: function(type, location, data, callback, reload) {
+        send: function (type, location, data, callback, reload) {
             callback = callback || false;
             reload = reload || false;
 
@@ -273,43 +270,42 @@ var NoReload = (function($) {
                 dataType: "json",
                 beforeSend: ajax.beforeSend,
                 complete: ajax.complete,
-                success: function(response) {
+                success: function (response) {
                     if (controllers.defaultResponseProcessor(response)) {
                         if (callback) {
                             NR.safeCallControllers(callback, response);
                         }
                         if (reload === true) {
                             NR.load(lastRoute, response);
-                        }
-                        else if(reload){
+                        } else if (reload) {
                             NR.load(reload, response);
                         }
                     }
                 }
             });
         },
-        getCurrentRoute: function() {
+        getCurrentRoute: function () {
             return lastRoute;
         },
-        setDefaultErrorFunction: function(func) {
+        setDefaultErrorFunction: function (func) {
             ajax.defaultErrorFunction = func;
         },
-        setDefaultResponseProcessor: function(func) {
+        setDefaultResponseProcessor: function (func) {
             controllers.defaultResponseProcessor = func;
         },
-        getServerAddress: function() {
+        getServerAddress: function () {
             return serverAddress;
         },
-        setServerAddress: function(address) {
+        setServerAddress: function (address) {
             serverAddress = address;
         },
-        getInitialRoute: function() {
+        getInitialRoute: function () {
             return initialRoute;
         },
-        setInitialRoute: function(state) {
+        setInitialRoute: function (state) {
             initialRoute = state;
         },
-        setReloadPolicy: function(policy){
+        setReloadPolicy: function (policy) {
             selectedReloadPolicy = policy;
         }
     };

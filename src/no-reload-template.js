@@ -1,5 +1,5 @@
-(function(NR, $, Handlebars) {
-    NR.template = (function() {
+(function (NR, $, Handlebars) {
+    NR.template = (function () {
         var templatePath = '';
         var templateFormat = '.hbs';
         var partialsPath = '';
@@ -9,79 +9,78 @@
 
         var templates = {};
 
-        var formatTemplateUrl = function(name) {
+        var formatTemplateUrl = function (name) {
             return templatePath + name + templateFormat;
         };
-        var formatPartialUrl = function(name) {
+        var formatPartialUrl = function (name) {
             return partialsPath + name + partialsFormat;
         };
 
         return {
-            loadTemplate: function(name, callback) {
+            loadTemplate: function (name, callback) {
                 if (typeof templates[name] === 'undefined') {
                     $.ajax({
                         url: formatTemplateUrl(name),
                         contentType: "text/html",
                         dataType: "html",
                         cache: true,
-                        success: function(template) {
+                        success: function (template) {
                             templates[name] = Handlebars.compile(template);
                             callback(templates[name]);
                         },
-                        error: function() {
-                            templates[name] = function() {
+                        error: function () {
+                            templates[name] = function () {
                                 return 'Template não encontrado';
                             };
                             callback(templates[name]);
                         }
                     });
-                }
-                else {
+                } else {
                     callback(templates[name]);
                 }
             },
-            compile: function($destino, templateName, data) {
-                this.loadTemplate(templateName, function(template) {
+            compile: function ($destino, templateName, data) {
+                this.loadTemplate(templateName, function (template) {
                     $destino.html(template(data));
                 });
             },
-            compileInMain: function(templateName, data) {
+            compileInMain: function (templateName, data) {
                 this.compile($(mainElement), templateName, data);
                 $(mainElement).append('<div class="clear"></div>');
             },
-            registerPartial: function(name) {
-                $.get(formatPartialUrl(name), function(response) {
+            registerPartial: function (name) {
+                $.get(formatPartialUrl(name), function (response) {
                     Handlebars.registerPartial(name, response);
                 });
             },
-            getTemplatePath: function() {
+            getTemplatePath: function () {
                 return templatePath;
             },
-            setTemplatePath: function(path) {
+            setTemplatePath: function (path) {
                 templatePath = path;
             },
-            getTemplateFormat: function() {
+            getTemplateFormat: function () {
                 return templateFormat;
             },
-            setTemplateFormat: function(path) {
+            setTemplateFormat: function (path) {
                 templateFormat = path;
             },
-            getPartialsPath: function() {
+            getPartialsPath: function () {
                 return partialsPath;
             },
-            setPartialsPath: function(path) {
+            setPartialsPath: function (path) {
                 partialsPath = path;
             },
-            getPartialsFormat: function() {
+            getPartialsFormat: function () {
                 return partialsFormat;
             },
-            setPartialsFormat: function(path) {
+            setPartialsFormat: function (path) {
                 partialsFormat = path;
             },
-            getMainElement: function() {
+            getMainElement: function () {
                 return mainElement;
             },
-            setMainElement: function(path) {
+            setMainElement: function (path) {
                 mainElement = path;
             }
         };
