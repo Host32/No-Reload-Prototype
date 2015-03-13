@@ -8,6 +8,8 @@
         var mainElement = 'body';
 
         var templates = {};
+        var preCompileEvents = {};
+        var posCompileEvents = {};
 
         var formatTemplateUrl = function (name) {
             return templatePath + name + templateFormat;
@@ -17,6 +19,28 @@
         };
 
         return {
+            registerPreCompileEvent: function (name, callback) {
+                preCompileEvents[name] = callback;
+            },
+            unregisterPreCompileEvent: function (name) {
+                delete preCompileEvents[name];
+            },
+            preCompile: function () {
+                for (var key in preCompileEvents) {
+                    preCompileEvents[key]();
+                }
+            },
+            registerPosCompileEvent: function (name, callback) {
+                posCompileEvents[name] = callback;
+            },
+            unregisterPosCompileEvent: function (name) {
+                delete posCompileEvents[name];
+            },
+            posCompile: function () {
+                for (var key in posCompileEvents) {
+                    posCompileEvents[key]();
+                }
+            },
             loadTemplate: function (name, callback) {
                 if (typeof templates[name] === 'undefined') {
                     $.ajax({
@@ -40,8 +64,11 @@
                 }
             },
             compile: function ($destino, templateName, data) {
+                var t = this;
                 this.loadTemplate(templateName, function (template) {
+                    t.preCompile();
                     $destino.html(template(data));
+                    t.posCompile();
                 });
             },
             compileInMain: function (templateName, data) {
