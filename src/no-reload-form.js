@@ -5,12 +5,13 @@
         var defaultLanguage = 'en';
         
         var ALPHA_EXP = /^[a-z]+$/i;
-        var NUMERIC_EXP = /^[0-9]+$/i;
+        var NATURAL_EXP = /^[0-9]+$/i;
+        var NUMBER_EXP = /^([-]?[0-9]*[\.]?[0-9]*)$/i;
         var ALPHA_NUMERIC_EXP = /^[a-z0-9]+$/i;
         var ALPHA_DASH_EXP = /^[a-z0-9_-]+$/i;
         var EMAIL_EXP = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
         var EMAILS_EXP = /^((([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))([,]?))+$/;
-        var IP_EXP = /^([\d]{1,3})+(\.([\d]{1,3})){3}$/;
+        var IP_EXP = /^[\d]{1,3}(\.([\d]{1,3})){3}$/;
         
         var RULE_PARAM_EXP = /(\[(.*)\])/;
         
@@ -37,10 +38,10 @@
                 return value.length == length;
             },
             greater_than: function(value, number){
-                return NUMERIC_EXP.test(value) && parseInt(value, 10) >= number;
+                return NUMBER_EXP.test(value) && parseInt(value, 10) >= number;
             },
             less_than: function(value, number){
-                return NUMERIC_EXP.test(value) && parseInt(value, 10) <= number;
+                return NUMBER_EXP.test(value) && parseInt(value, 10) <= number;
             },
             alpha: function(value){
                 return ALPHA_EXP.test(value);
@@ -55,7 +56,7 @@
                 return (value - parseFloat( value ) + 1) >= 0;
             },
             is_natural: function(value){
-                return NUMERIC_EXP.test(value);
+                return NATURAL_EXP.test(value);
             },
             valid_email: function(value){
                 return EMAIL_EXP.test(value);
