@@ -1,4 +1,5 @@
 (function (NR, $) {
+    'use strict';
     NR.form = (function () {
         var formSeletor = 'form';
 
@@ -191,8 +192,8 @@
                 var reload = $form.attr('reload') || 'false';
                 reload = reload.toLowerCase() === 'false' ? false : (reload.toLowerCase() === 'true' ? true : reload);
 
+                var method = $form.attr('method') || 'get';
                 var callback = $form.attr('callback') || false;
-                var method = $form.attr('method') || false;
                 var question = $form.attr('question') || false;
 
                 var showPopup = $form.attr('show-error-popup') || 'true';

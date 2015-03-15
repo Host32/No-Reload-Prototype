@@ -1,4 +1,5 @@
 (function (NR, $, Handlebars) {
+    'use strict';
     NR.template = (function () {
         var templatePath = '';
         var templateFormat = '.hbs';
@@ -63,17 +64,19 @@
                     callback(templates[name]);
                 }
             },
-            compile: function ($destino, templateName, data) {
+            compile: function ($destino, templateName, data, onComplete) {
                 var t = this;
                 this.loadTemplate(templateName, function (template) {
                     t.preCompile();
                     $destino.html(template(data));
                     t.posCompile();
+                    if (typeof onComplete === 'function') {
+                        onComplete();
+                    }
                 });
             },
-            compileInMain: function (templateName, data) {
-                this.compile($(mainElement), templateName, data);
-                $(mainElement).append('<div class="clear"></div>');
+            compileInMain: function (templateName, data, onComplete) {
+                this.compile($(mainElement), templateName, data, onComplete);
             },
             registerPartial: function (name) {
                 $.get(formatPartialUrl(name), function (response) {
