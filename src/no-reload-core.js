@@ -92,14 +92,16 @@ var NoReload = (function ($) {
             return function (params) {
                 var names = name.split(';');
                 for (var key in names) {
-                    name = names[key].split('.');
-                    var controllerName = name[0];
-                    var funcName = name[1];
+                    var scope = c.registredControllers;
+                    var scopeSplit = names[key].split('.');
+                    for (var i in scopeSplit) {
+                        scope = scope[scopeSplit[i]];
 
-                    if (typeof c.registredControllers[controllerName] !== 'undefined' &&
-                        typeof c.registredControllers[controllerName][funcName] !== 'undefined') {
-                        c.registredControllers[controllerName][funcName](params);
+                        if (scope == undefined) break;
                     }
+                    if (scope == undefined) continue;
+
+                    scope(params);
                 }
             };
         }
