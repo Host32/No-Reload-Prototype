@@ -92,18 +92,31 @@ var NoReload = (function ($) {
             return function (params) {
                 var names = name.split(';');
                 for (var key in names) {
-                    var scope = c.registredControllers;
-                    var scopeSplit = names[key].split('.');
-                    for (var i in scopeSplit) {
-                        scope = scope[scopeSplit[i]];
-
-                        if (scope == undefined) break;
-                    }
-                    if (scope == undefined) continue;
+                    var scope = c.getControllerValue(names[key]);
 
                     scope(params);
                 }
             };
+        },
+        getControllerValue: function (name) {
+            var scope = this.registredControllers;
+            var scopeSplit = name.split('.');
+            for (var i in scopeSplit) {
+                scope = scope[scopeSplit[i]];
+
+                if (scope == undefined) return null;
+            }
+            return scope;
+        },
+        setControllerValue: function (name, value) {
+            var scope = this.registredControllers;
+            var scopeSplit = name.split('.');
+            for (var i = 0; i < scopeSplit.length - 1; i++) {
+                scope = scope[scopeSplit[i]];
+
+                if (scope == undefined) throw 'Scope ' + name + ' has not found in registred controllers';
+            }
+            scope[scopeSplit[scopeSplit.length - 1]] = value;
         }
     };
 
@@ -260,6 +273,9 @@ var NoReload = (function ($) {
                 controllers.call(controller, params);
             }
         },
+        callControllers: function (controller, params) {
+            controllers.call(controller, params);
+        },
         send: function (type, location, data, callback, reload) {
             callback = callback || false;
             reload = reload || false;
@@ -285,6 +301,12 @@ var NoReload = (function ($) {
                     }
                 }
             });
+        },
+        setControllerValue: function (name, value) {
+            controllers.setControllerValue(name, value);
+        },
+        getControllerValue: function (name) {
+            return controllers.getControllerValue(name);
         },
         getCurrentRoute: function () {
             return lastRoute;
