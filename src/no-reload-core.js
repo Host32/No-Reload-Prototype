@@ -262,7 +262,8 @@ var NoReload = (function ($) {
                         NR.safeCallControllersWithLoad(routeDef.definition.controller, response);
                     });
                 } else {
-                    params.route = routeDef;
+                    if (params !== undefined)
+                        params.route = routeDef;
                     NR.safeCallControllersWithLoad(routeDef.definition.controller, params);
                 }
                 lastRoute = route;
