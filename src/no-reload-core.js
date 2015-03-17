@@ -98,9 +98,9 @@ var NoReload = (function ($) {
                     for (var i = 0; i < scopeSplit.length - 1; i++) {
                         scope = scope[scopeSplit[i]];
 
-                        if (scope == undefined) break;
+                        if (scope === undefined) break;
                     }
-                    if (scope[scopeSplit[scopeSplit.length - 1]] == undefined) continue;
+                    if (scope === undefined || scope[scopeSplit[scopeSplit.length - 1]] === undefined) continue;
                     scope[scopeSplit[scopeSplit.length - 1]](params);
                 }
             };
