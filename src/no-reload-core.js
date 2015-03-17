@@ -283,6 +283,9 @@ var NoReload = (function ($) {
                 controllers.call(controller, params);
             }
         },
+        callControllers: function (controller, params) {
+            controllers.call(controller, params);
+        },
         send: function (type, location, data, callback, reload) {
             callback = callback || false;
             reload = reload || false;
@@ -298,7 +301,7 @@ var NoReload = (function ($) {
                 success: function (response) {
                     if (controllers.defaultResponseProcessor(response)) {
                         if (callback) {
-                            NR.safeCallControllers(callback, response);
+                            NR.callControllers(callback, response);
                         }
                         if (reload === true) {
                             NR.load(lastRoute, response);
