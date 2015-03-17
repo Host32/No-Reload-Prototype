@@ -1,4 +1,5 @@
 var NoReload = (function ($) {
+    'use strict';
     var serverAddress = '';
     var initialRoute = 'home';
     var lastRoute = initialRoute;
@@ -92,9 +93,15 @@ var NoReload = (function ($) {
             return function (params) {
                 var names = name.split(';');
                 for (var key in names) {
-                    var scope = c.getControllerValue(names[key]);
+                    var scope = c.registredControllers;
+                    var scopeSplit = name.split('.');
+                    for (var i = 0; i < scopeSplit.length - 1; i++) {
+                        scope = scope[scopeSplit[i]];
 
-                    scope(params);
+                        if (scope == undefined) break;
+                    }
+                    if (scope[scopeSplit[scopeSplit.length - 1]] == undefined) continue;
+                    scope[scopeSplit[scopeSplit.length - 1]](params);
                 }
             };
         },
@@ -251,9 +258,11 @@ var NoReload = (function ($) {
             if (routeDef) {
                 if (isAjax(routeDef, params)) {
                     ajax.run('get', route, function (response) {
+                        response.route = routeDef;
                         NR.safeCallControllersWithLoad(routeDef.definition.controller, response);
                     });
                 } else {
+                    params.route = routeDef;
                     NR.safeCallControllersWithLoad(routeDef.definition.controller, params);
                 }
                 lastRoute = route;
@@ -272,9 +281,6 @@ var NoReload = (function ($) {
             if (controllers.defaultResponseProcessor(params)) {
                 controllers.call(controller, params);
             }
-        },
-        callControllers: function (controller, params) {
-            controllers.call(controller, params);
         },
         send: function (type, location, data, callback, reload) {
             callback = callback || false;
