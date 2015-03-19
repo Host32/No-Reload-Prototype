@@ -49,7 +49,7 @@ var NoReload = (function ($) {
         prepareUrl: function (location) {
             return serverAddress + location;
         },
-        defaultErrorFunction: function () {
+        error: function () {
             throw "Ajax Error";
         },
         beforeSend: function () {},
@@ -66,9 +66,7 @@ var NoReload = (function ($) {
                 dataType: "json",
                 beforeSend: a.beforeSend,
                 complete: a.complete,
-                error: function (params) {
-                    ajax.defaultErrorFunction(params);
-                }
+                error: a.error
             });
         }
     };
@@ -317,9 +315,6 @@ var NoReload = (function ($) {
         },
         getCurrentRoute: function () {
             return lastRoute;
-        },
-        setDefaultErrorFunction: function (func) {
-            ajax.defaultErrorFunction = func;
         },
         setDefaultResponseProcessor: function (func) {
             controllers.defaultResponseProcessor = func;
