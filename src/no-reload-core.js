@@ -46,7 +46,7 @@ var NoReload = (function ($) {
     };
 
     var ajax = {
-        formatUrl: function (location) {
+        prepareUrl: function (location) {
             return serverAddress + location;
         },
         defaultErrorFunction: function () {
@@ -55,7 +55,7 @@ var NoReload = (function ($) {
         beforeSend: function () {},
         complete: function () {},
         run: function (method, url, success) {
-            url = this.formatUrl(url);
+            url = this.prepareUrl(url);
             var a = this;
             $.ajax({
                 type: method,
@@ -289,7 +289,7 @@ var NoReload = (function ($) {
 
             $.ajax({
                 type: type,
-                url: ajax.formatUrl(location),
+                url: ajax.prepareUrl(location),
                 data: data,
                 contentType: "application/json",
                 dataType: "json",
