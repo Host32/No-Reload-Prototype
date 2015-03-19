@@ -293,14 +293,10 @@ var NoReload = (function ($) {
             callback = callback || false;
             reload = reload || false;
 
-            $.ajax({
+            ajax.run({
                 type: type,
-                url: ajax.prepareUrl(location),
+                url: location,
                 data: data,
-                contentType: "application/json",
-                dataType: "json",
-                beforeSend: ajax.beforeSend,
-                complete: ajax.complete,
                 success: function (response) {
                     if (controllers.defaultResponseProcessor(response)) {
                         if (callback) {
