@@ -311,17 +311,8 @@ var NoReload = (function ($) {
                 }
             });
         },
-        setControllerValue: function (name, value) {
-            controllers.setControllerValue(name, value);
-        },
-        getControllerValue: function (name) {
-            return controllers.getControllerValue(name);
-        },
         getCurrentRoute: function () {
             return lastRoute;
-        },
-        setDefaultResponseProcessor: function (func) {
-            controllers.defaultResponseProcessor = func;
         },
         getServerAddress: function () {
             return serverAddress;
