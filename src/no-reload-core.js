@@ -232,9 +232,10 @@ var NoReload = (function ($) {
         controllers: controllers,
         routes: routes,
         startAnchorNavigation: function () {
+            var NR = this;
             $(window).on('hashchange', function () {
                 var name = location.hash.replace(/^#/, '');
-                this.load(name);
+                NR.load(name);
             });
         },
         registerRoute: function (name, controller, isAjax) {
