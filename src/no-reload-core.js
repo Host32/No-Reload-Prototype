@@ -46,6 +46,17 @@ var NoReload = (function ($) {
     };
 
     var ajax = {
+        getDefaultParams: function (url) {
+            var ajax = this;
+            return {
+                url: ajax.prepareUrl(url),
+                contentType: "application/json",
+                dataType: "json",
+                beforeSend: ajax.beforeSend,
+                complete: ajax.complete,
+                error: ajax.error
+            };
+        },
         prepareUrl: function (location) {
             return serverAddress + location;
         },
@@ -54,29 +65,12 @@ var NoReload = (function ($) {
         },
         beforeSend: function () {},
         complete: function () {},
-        run: function (params) { //method, url, success) {
+        run: function (params) {
             var url = params.url || '';
-            var type = params.type || 'get';
-            var success = params.success || function () {};
-            var cache = params.cache || false;
-            var contentType = params.contentType || "application/json";
-            var dataType = params.dataType || "json";
-            var beforeSend = params.beforeSend || this.beforeSend;
-            var complete = params.complete || this.complete;
-            var error = params.error || this.error;
 
-            url = this.prepareUrl(url);
-            $.ajax({
-                type: type,
-                url: url,
-                success: success,
-                cache: cache,
-                contentType: contentType,
-                dataType: dataType,
-                beforeSend: beforeSend,
-                complete: complete,
-                error: error
-            });
+            params = utils.objectMerge(this.getDefaultParams(url), params);
+
+            $.ajax(params);
         }
     };
 
