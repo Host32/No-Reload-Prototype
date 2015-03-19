@@ -54,7 +54,8 @@ var NoReload = (function ($) {
                 dataType: "json",
                 beforeSend: ajax.beforeSend,
                 complete: ajax.complete,
-                error: ajax.error
+                error: ajax.error,
+                cache: false
             };
         },
         prepareUrl: function (location) {
