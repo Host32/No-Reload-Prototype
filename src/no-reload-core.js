@@ -268,13 +268,13 @@ var NoReload = (function ($) {
                         type: 'get',
                         success: function (response) {
                             response.route = routeDef;
-                            NR.safeCallControllersWithLoad(routeDef.definition.controller, response);
+                            NR.call(routeDef.definition.controller, response);
                         }
                     });
                 } else {
                     if (params !== undefined)
                         params.route = routeDef;
-                    NR.safeCallControllersWithLoad(routeDef.definition.controller, params);
+                    NR.call(routeDef.definition.controller, params);
                 }
                 lastRoute = route;
             } else {
@@ -283,7 +283,7 @@ var NoReload = (function ($) {
         },
         call: function (controller, params) {
             this.preLoad();
-            this.safeCallControllers(controller, params);
+            controllers.safeCall(controller, params);
             this.posLoad();
         },
         getCurrentRoute: function () {
