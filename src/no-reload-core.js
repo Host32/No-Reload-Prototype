@@ -80,16 +80,21 @@ var NoReload = (function ($) {
         registerController: function (name, controller) {
             this.registredControllers[name] = controller;
         },
-        defaultResponseProcessor: function () {
+        responseValidation: function () {
             return true;
         },
         call: function (controllerFunc, params) {
             if (typeof controllerFunc === 'string')
-                controllerFunc = this.getControllerFunc(controllerFunc);
+                controllerFunc = this.getFunc(controllerFunc);
 
             controllerFunc(params);
         },
-        getControllerFunc: function (name) {
+        safeCall: function (controller, params) {
+            if (this.responseValidation(params)) {
+                this.call(controller, params);
+            }
+        },
+        getFunc: function (name) {
             var c = this;
             return function (params) {
                 var names = name.split(';');
@@ -106,7 +111,7 @@ var NoReload = (function ($) {
                 }
             };
         },
-        getControllerValue: function (name) {
+        get: function (name) {
             var scope = this.registredControllers;
             var scopeSplit = name.split('.');
             for (var i in scopeSplit) {
@@ -116,7 +121,7 @@ var NoReload = (function ($) {
             }
             return scope;
         },
-        setControllerValue: function (name, value) {
+        set: function (name, value) {
             var scope = this.registredControllers;
             var scopeSplit = name.split('.');
             for (var i = 0; i < scopeSplit.length - 1; i++) {
@@ -276,18 +281,10 @@ var NoReload = (function ($) {
                 throw "the route '" + route + "' has not yet been registered";
             }
         },
-        safeCallControllersWithLoad: function (controller, params) {
+        call: function (controller, params) {
             this.preLoad();
             this.safeCallControllers(controller, params);
             this.posLoad();
-        },
-        safeCallControllers: function (controller, params) {
-            if (controllers.defaultResponseProcessor(params)) {
-                controllers.call(controller, params);
-            }
-        },
-        callControllers: function (controller, params) {
-            controllers.call(controller, params);
         },
         getCurrentRoute: function () {
             return lastRoute;
