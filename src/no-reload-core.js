@@ -1,8 +1,7 @@
 var NoReload = (function ($) {
     'use strict';
     var serverAddress = '';
-    var initialRoute = 'home';
-    var lastRoute = initialRoute;
+    var lastRoute = null;
 
     var reloadPolicy = {
         USE_RESPONSE: 0,
@@ -267,8 +266,6 @@ var NoReload = (function ($) {
                     NR.safeCallControllersWithLoad(routeDef.definition.controller, params);
                 }
                 lastRoute = route;
-            } else if (routes.find(initialRoute)) {
-                NR.loadState(initialRoute);
             } else {
                 throw "the route '" + route + "' has not yet been registered";
             }
@@ -332,12 +329,6 @@ var NoReload = (function ($) {
         },
         setServerAddress: function (address) {
             serverAddress = address;
-        },
-        getInitialRoute: function () {
-            return initialRoute;
-        },
-        setInitialRoute: function (state) {
-            initialRoute = state;
         },
         setReloadPolicy: function (policy) {
             selectedReloadPolicy = policy;
