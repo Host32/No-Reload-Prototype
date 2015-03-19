@@ -54,19 +54,28 @@ var NoReload = (function ($) {
         },
         beforeSend: function () {},
         complete: function () {},
-        run: function (method, url, success) {
+        run: function (params) { //method, url, success) {
+            var url = params.url || '';
+            var type = params.type || 'get';
+            var success = params.success || function () {};
+            var cache = params.cache || false;
+            var contentType = params.contentType || "application/json";
+            var dataType = params.dataType || "json";
+            var beforeSend = params.beforeSend || this.beforeSend;
+            var complete = params.complete || this.complete;
+            var error = params.error || this.error;
+
             url = this.prepareUrl(url);
-            var a = this;
             $.ajax({
-                type: method,
+                type: type,
                 url: url,
                 success: success,
-                cache: false,
-                contentType: "application/json",
-                dataType: "json",
-                beforeSend: a.beforeSend,
-                complete: a.complete,
-                error: a.error
+                cache: cache,
+                contentType: contentType,
+                dataType: dataType,
+                beforeSend: beforeSend,
+                complete: complete,
+                error: error
             });
         }
     };
@@ -254,9 +263,13 @@ var NoReload = (function ($) {
             var NR = this;
             if (routeDef) {
                 if (isAjax(routeDef, params)) {
-                    ajax.run('get', route, function (response) {
-                        response.route = routeDef;
-                        NR.safeCallControllersWithLoad(routeDef.definition.controller, response);
+                    ajax.run({
+                        url: route,
+                        type: 'get',
+                        success: function (response) {
+                            response.route = routeDef;
+                            NR.safeCallControllersWithLoad(routeDef.definition.controller, response);
+                        }
                     });
                 } else {
                     if (params !== undefined)
