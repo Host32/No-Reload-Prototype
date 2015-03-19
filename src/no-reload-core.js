@@ -289,28 +289,6 @@ var NoReload = (function ($) {
         callControllers: function (controller, params) {
             controllers.call(controller, params);
         },
-        send: function (type, location, data, callback, reload) {
-            callback = callback || false;
-            reload = reload || false;
-
-            ajax.run({
-                type: type,
-                url: location,
-                data: data,
-                success: function (response) {
-                    if (controllers.defaultResponseProcessor(response)) {
-                        if (callback) {
-                            NR.callControllers(callback, response);
-                        }
-                        if (reload === true) {
-                            NR.load(lastRoute, response);
-                        } else if (reload) {
-                            NR.load(reload, response);
-                        }
-                    }
-                }
-            });
-        },
         getCurrentRoute: function () {
             return lastRoute;
         },

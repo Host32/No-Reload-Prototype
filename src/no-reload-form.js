@@ -199,15 +199,38 @@
                 var showPopup = $form.attr('show-error-popup') || 'true';
                 showPopup = showPopup.toLowerCase() === 'false' ? false : true;
 
+                var form = this;
                 if (this.validateForm($form, showPopup)) {
                     if (question) {
                         NR.prompt.showQuestion(question, function () {
-                            NR.send(method, location, data, callback, reload);
+                            form.send(method, location, data, callback, reload);
                         });
                     } else {
-                        NR.send(method, location, data, callback, reload);
+                        form.send(method, location, data, callback, reload);
                     }
                 }
+            },
+            send: function (type, location, data, callback, reload) {
+                callback = callback || false;
+                reload = reload || false;
+
+                NR.ajax.run({
+                    type: type,
+                    url: location,
+                    data: data,
+                    success: function (response) {
+                        if (controllers.defaultResponseProcessor(response)) {
+                            if (callback) {
+                                NR.callControllers(callback, response);
+                            }
+                            if (reload === true) {
+                                NR.load(lastRoute, response);
+                            } else if (reload) {
+                                NR.load(reload, response);
+                            }
+                        }
+                    }
+                });
             },
             bind: function (seletor) {
                 this.unbind();
