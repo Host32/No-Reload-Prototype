@@ -9,8 +9,8 @@ var NoReload = (function ($) {
     };
     var selectedReloadPolicy = 0;
 
-    var preLoadEvents = {};
-    var posLoadEvents = {};
+    var beforeLoadEvents = {};
+    var afterLoadEvents = {};
 
     // The main path matching regexp utility.
     var PATH_REGEXP = new RegExp([
@@ -34,14 +34,14 @@ var NoReload = (function ($) {
         }
     };
 
-    var preLoad = function () {
-        for (var key in preLoadEvents) {
-            preLoadEvents[key]();
+    var beforeLoad = function () {
+        for (var key in beforeLoadEvents) {
+            beforeLoadEvents[key]();
         }
     };
-    var posLoad = function () {
-        for (var key in posLoadEvents) {
-            posLoadEvents[key]();
+    var afterLoad = function () {
+        for (var key in afterLoadEvents) {
+            afterLoadEvents[key]();
         }
     };
 
