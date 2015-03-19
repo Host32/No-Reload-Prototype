@@ -225,8 +225,8 @@ var NoReload = (function ($) {
 
     var __export__ = {
         reloadPolicy: reloadPolicy,
-        preLoad: preLoad,
-        posLoad: posLoad,
+        beforeLoad: beforeLoad,
+        afterLoad: afterLoad,
         utils: utils,
         ajax: ajax,
         controllers: controllers,
@@ -246,17 +246,17 @@ var NoReload = (function ($) {
         registerController: function (name, controller) {
             controllers.registerController(name, controller);
         },
-        registerPreLoadEvent: function (name, event) {
-            preLoadEvents[name] = event;
+        registerBeforeLoadEvent: function (name, event) {
+            beforeLoadEvents[name] = event;
         },
-        unregisterPreLoadEvent: function (name) {
-            delete preLoadEvents[name];
+        unregisterBeforeLoadEvent: function (name) {
+            delete beforeLoadEvents[name];
         },
-        registerPosLoadEvent: function (name, event) {
-            posLoadEvents[name] = event;
+        registerAfterLoadEvent: function (name, event) {
+            afterLoadEvents[name] = event;
         },
-        unregisterPosLoadEvent: function (name) {
-            delete preLoadEvents[name];
+        unregisterAfterLoadEvent: function (name) {
+            delete afterLoadEvents[name];
         },
         load: function (route, params) {
             var routeDef = routes.find(route);
@@ -282,9 +282,9 @@ var NoReload = (function ($) {
             }
         },
         call: function (controller, params) {
-            this.preLoad();
+            this.beforeLoad();
             controllers.safeCall(controller, params);
-            this.posLoad();
+            this.afterLoad();
         },
         getCurrentRoute: function () {
             return lastRoute;
