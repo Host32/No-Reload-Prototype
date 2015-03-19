@@ -135,25 +135,39 @@ var NoReload = (function ($) {
 
     var routes = {
         registredRoutes: {},
-        registerRoute: function (route, controller, isAjax) {
-            if (typeof isAjax === 'undefined')
-                isAjax = true;
+        registerRoute: function (params) {
+            if (params.route === undefined)
+                throw 'invalid route name';
+            if (params.controller === undefined)
+                throw 'invalid route controller';
 
-            var routeReg = this.pathtoRegexp(route);
-            this.registredRoutes[route] = {
+            if (params.ajax === undefined)
+                params.ajax = true;
+
+            var routeReg = this.pathtoRegexp(params.route);
+            var alias = params.alias || params.route;
+
+            this.registredRoutes[alias] = {
                 regExp: routeReg.regExp,
-                routeParams: routeReg.keys,
-                controller: controller,
-                isAjax: isAjax
+                params: routeReg.keys,
+                controller: params.controller,
+                ajax: params.ajax
             };
         },
         find: function (route) {
             for (var key in this.registredRoutes) {
-                var regExp = this.registredRoutes[key].regExp;
+                var route = this.registredRoutes[key];
+                var regExp = route.regExp;
                 if (regExp.test(route)) {
+                    var matches = route.match(regExp);
+
+                    for (var key2 in route.keys) {
+                        matches[route.keys[key2]] = matches[key2];
+                    }
+
                     return {
-                        definition: this.registredRoutes[key],
-                        matches: route.match(regExp)
+                        definition: route,
+                        matches: matches
                     };
                 }
             }
@@ -238,8 +252,8 @@ var NoReload = (function ($) {
                 NR.load(name);
             });
         },
-        registerRoute: function (name, controller, isAjax) {
-            routes.registerRoute(name, controller, isAjax);
+        registerRoute: function (params) {
+            routes.registerRoute(params);
         },
         isRegistredRoute: function (name) {
             return routes.find(name) !== false;
