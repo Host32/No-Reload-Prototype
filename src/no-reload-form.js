@@ -221,15 +221,13 @@
                     url: location,
                     data: data,
                     success: function (response) {
-                        if (controllers.defaultResponseProcessor(response)) {
-                            if (callback) {
-                                NR.callControllers(callback, response);
-                            }
-                            if (reload === true) {
-                                NR.load(lastRoute, response);
-                            } else if (reload) {
-                                NR.load(reload, response);
-                            }
+                        if (callback) {
+                            NR.call(callback, response);
+                        }
+                        if (reload === true) {
+                            NR.load(NR.getCurrentRoute(), response);
+                        } else if (reload) {
+                            NR.load(reload, response);
                         }
                     }
                 });
