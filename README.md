@@ -4,8 +4,8 @@ Full AJAX javascript framework
 ## Prerequisites
 
 * JQuery http://jquery.com/
-* Impromptu http://trentrichardson.com/Impromptu/
-* Handlebars http://handlebarsjs.com/
+* Impromptu (for prompt plugin only) http://trentrichardson.com/Impromptu/
+* Handlebars (for template plugin only) http://handlebarsjs.com/
 
 ## Usage example
 
@@ -62,7 +62,6 @@ Full AJAX javascript framework
   <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
   
   <script type="text/javascript" src="JS/jquery.js"></script>
-  <script type="text/javascript" src="JS/prompt.js"></script>
   <script type="text/javascript" src="JS/handlebars-v3.0.0.js"></script>
   <script type="text/javascript" src="JS/no-reload/no-reload-core.js"></script>
   <script type="text/javascript" src="JS/no-reload/no-reload-template.js"></script>
