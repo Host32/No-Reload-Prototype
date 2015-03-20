@@ -30,7 +30,7 @@
                     compileEvents[key]();
                 }
             },
-            loadTemplate: function (name, callback) {
+            load: function (name, callback) {
                 if (typeof templates[name] === 'undefined') {
                     $.ajax({
                         url: formatTemplateUrl(name),
@@ -52,10 +52,10 @@
                     callback(templates[name]);
                 }
             },
-            compile: function ($destino, templateName, data, onComplete) {
+            compile: function (destino, templateName, data, onComplete) {
                 var t = this;
-                this.loadTemplate(templateName, function (template) {
-                    $destino.html(template(data));
+                this.load(templateName, function (template) {
+                    $(destino).html(template(data));
                     t.callCompileEvents();
                     if (typeof onComplete === 'function') {
                         onComplete();
