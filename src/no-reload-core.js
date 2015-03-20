@@ -47,9 +47,7 @@ var NoReload = (function ($) {
 
     var ajax = {
         getDefaultParams: function (url) {
-            var ajax = this;
             return {
-                url: ajax.prepareUrl(url),
                 contentType: "application/json",
                 dataType: "json",
                 beforeSend: ajax.beforeSend,
@@ -68,6 +66,7 @@ var NoReload = (function ($) {
         complete: function () {},
         run: function (params) {
             var url = params.url || '';
+            params.url = this.prepareUrl(url);
 
             params = utils.objectMerge(this.getDefaultParams(url), params);
 
@@ -157,12 +156,11 @@ var NoReload = (function ($) {
         isRegistred: function (name) {
             return routes.find(name) !== false;
         },
-        find: function (route) {
+        find: function (name) {
             for (var key in this.registredRoutes) {
                 var route = this.registredRoutes[key];
-                var regExp = route.regExp;
-                if (regExp.test(route)) {
-                    var matches = route.match(regExp);
+                if (route.regExp.test(name)) {
+                    var matches = name.match(route.regExp);
 
                     for (var key2 in route.keys) {
                         matches[route.keys[key2]] = matches[key2];
@@ -237,7 +235,7 @@ var NoReload = (function ($) {
     };
 
     function isAjax(routeDef, params) {
-        return routeDef.definition.isAjax && (selectedReloadPolicy === reloadPolicy.NEW_REQUEST || typeof params === 'undefined');
+        return routeDef.definition.ajax && (selectedReloadPolicy === reloadPolicy.NEW_REQUEST || typeof params === 'undefined');
     }
 
     var __export__ = {
