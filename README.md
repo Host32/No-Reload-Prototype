@@ -9,12 +9,14 @@ Full AJAX javascript framework
 
 ## Usage example
 
-#### Server/index.php
-```php
-<?php echo json_encode(array("hello" => "world"));
+#### Server/sample.js
+```json
+{
+  "hello": "world"
+}
 ```
 
-#### Cliente/Templates/home.hbs
+#### Templates/home.hbs
 ```html
 <div>
 {{hello}}
@@ -25,18 +27,13 @@ Full AJAX javascript framework
 ```javascript
 (function($, NR){
   // configure json server
-  NR.setServerAddress('Server/index.php');
+  NR.setServerAddress('Server/');
   
   // folder containing the templates
-  NR.template.setTemplatePath('Cliente/Templates/');
-  
-  // default Error message
-  NR.setDefaultErrorFunction(function(){
-    NR.prompt.show("ERROR");
-  });
+  NR.template.setTemplatePath('Templates/');
   
   // create a new route
-  NR.registerRoute('home', function(response){
+  NR.registerRoute('sample.js', function(response){
     // when this route has be loaded, an ajax request will be sent to the server
     // the response object is the server response
     
@@ -44,11 +41,8 @@ Full AJAX javascript framework
     NR.template.compile($('body'), 'home', response);
   });
   
-  // set home as our initial route
-  NR.setInitialRoute('home');
-  
-  // load the initial Route 
-  NR.load();
+  // load the Route 
+  NR.load('sample.js');
   
   // bind loadstate on hash change
   $(window).on('hashchange', function() {
@@ -61,8 +55,8 @@ Full AJAX javascript framework
 
 #### index.html
 ```html
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html>
 <head>
   <title>No-Reload Sample</title>
   <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
@@ -72,9 +66,6 @@ Full AJAX javascript framework
   <script type="text/javascript" src="JS/handlebars-v3.0.0.js"></script>
   <script type="text/javascript" src="JS/no-reload/no-reload-core.js"></script>
   <script type="text/javascript" src="JS/no-reload/no-reload-template.js"></script>
-  <script type="text/javascript" src="JS/no-reload/no-reload-prompt.js"></script>
-  <script type="text/javascript" src="JS/no-reload/no-reload-timeouts.js"></script>
-  <script type="text/javascript" src="JS/no-reload/no-reload-intervals.js"></script>
   <script type="text/javascript" src="app.js"></script>
 </head>
 <body>
