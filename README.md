@@ -9,7 +9,7 @@ Full AJAX javascript framework
 
 ## Usage example
 
-#### Server/sample.js
+#### Server/sample.json
 ```json
 {
   "hello": "world"
@@ -33,7 +33,7 @@ Full AJAX javascript framework
   NR.template.setTemplatePath('Templates/');
   
   // create a new route
-  NR.registerRoute('sample.js', function(response){
+  NR.registerRoute('sample.json', function(response){
     // when this route has be loaded, an ajax request will be sent to the server
     // the response object is the server response
     
