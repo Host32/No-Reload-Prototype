@@ -143,10 +143,11 @@ var NoReload = (function ($) {
             if (params.ajax === undefined)
                 params.ajax = true;
 
-            var routeReg = this.pathtoRegexp(params.route);
             var alias = params.alias || params.route;
 
+            var routeReg = this.pathtoRegexp(alias);
             this.registredRoutes[alias] = {
+                route: params.route,
                 regExp: routeReg.regExp,
                 params: routeReg.keys,
                 controller: params.controller,
@@ -271,7 +272,7 @@ var NoReload = (function ($) {
             if (routeDef) {
                 if (isAjax(routeDef, params)) {
                     ajax.run({
-                        url: route,
+                        url: routeDef.definition.route,
                         type: 'get',
                         success: function (response) {
                             response.route = routeDef;
