@@ -24,7 +24,7 @@
             }
         };
 
-        NR.registerPreLoadEvent("clearAllIntervals", __export__.clearAll);
+        NR.registerBeforeLoadEvent("clearAllIntervals", __export__.clearAll);
 
         return __export__;
     })();
