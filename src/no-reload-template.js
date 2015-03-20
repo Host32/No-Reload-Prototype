@@ -9,8 +9,7 @@
         var mainElement = 'body';
 
         var templates = {};
-        var preCompileEvents = {};
-        var posCompileEvents = {};
+        var compileEvents = {};
 
         var formatTemplateUrl = function (name) {
             return templatePath + name + templateFormat;
@@ -20,26 +19,15 @@
         };
 
         return {
-            registerPreCompileEvent: function (name, callback) {
-                preCompileEvents[name] = callback;
+            registerCompileEvent: function (name, callback) {
+                compileEvents[name] = callback;
             },
-            unregisterPreCompileEvent: function (name) {
-                delete preCompileEvents[name];
+            unregisterCompileEvent: function (name) {
+                delete compileEvents[name];
             },
-            preCompile: function () {
+            callCompileEvents: function () {
                 for (var key in preCompileEvents) {
-                    preCompileEvents[key]();
-                }
-            },
-            registerPosCompileEvent: function (name, callback) {
-                posCompileEvents[name] = callback;
-            },
-            unregisterPosCompileEvent: function (name) {
-                delete posCompileEvents[name];
-            },
-            posCompile: function () {
-                for (var key in posCompileEvents) {
-                    posCompileEvents[key]();
+                    compileEvents[key]();
                 }
             },
             loadTemplate: function (name, callback) {
@@ -67,9 +55,8 @@
             compile: function ($destino, templateName, data, onComplete) {
                 var t = this;
                 this.loadTemplate(templateName, function (template) {
-                    t.preCompile();
                     $destino.html(template(data));
-                    t.posCompile();
+                    t.callCompileEvents();
                     if (typeof onComplete === 'function') {
                         onComplete();
                     }
