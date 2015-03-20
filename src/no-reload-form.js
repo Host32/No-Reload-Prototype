@@ -131,13 +131,14 @@
             validate: function (rule, value, param) {
                 return (typeof validations[rule] === 'function') ? validations[rule](value, param) : true;
             },
-            printErrorValidation: function ($field, errorMessage) {
-                var errorDest = $field.attr('error-field') || false;
+            printErrorValidation: function (field, errorMessage) {
+                var errorDest = $(field).attr('error-field') || false;
                 if (errorDest) {
                     $(errorDest).html(errorMessage);
                 }
             },
-            validateField: function ($field) {
+            validateField: function (field) {
+                var $field = $(field);
                 var rules = $field.attr('rules') || '';
 
                 if (rules.length > 0) {
@@ -163,11 +164,11 @@
                 }
                 return true;
             },
-            validateForm: function ($form, showPopup) {
+            validateForm: function (form, showPopup) {
                 var t = this;
                 var errorMessage = '';
                 var foundError = false;
-                $form.find(':input').each(function () {
+                $(form).find(':input').each(function () {
                     if (!t.validateField($(this))) {
                         foundError = true;
                         errorMessage += validationErrorMessage + '\n';
@@ -184,7 +185,8 @@
 
                 return !foundError;
             },
-            submit: function ($form) {
+            submit: function (form) {
+                var $form = $(form);
 
                 var location = $form.attr('action');
                 var data = $form.serialize();
@@ -199,14 +201,14 @@
                 var showPopup = $form.attr('show-error-popup') || 'true';
                 showPopup = showPopup.toLowerCase() === 'false' ? false : true;
 
-                var form = this;
+                var f = this;
                 if (this.validateForm($form, showPopup)) {
                     if (question) {
                         NR.prompt.showQuestion(question, function () {
-                            form.send(method, location, data, callback, reload);
+                            f.send(method, location, data, callback, reload);
                         });
                     } else {
-                        form.send(method, location, data, callback, reload);
+                        f.send(method, location, data, callback, reload);
                     }
                 }
             },
