@@ -26,7 +26,7 @@
                 delete compileEvents[name];
             },
             callCompileEvents: function () {
-                for (var key in preCompileEvents) {
+                for (var key in compileEvents) {
                     compileEvents[key]();
                 }
             },
