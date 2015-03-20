@@ -77,7 +77,7 @@ var NoReload = (function ($) {
 
     var controllers = {
         registredControllers: {},
-        registerController: function (name, controller) {
+        register: function (name, controller) {
             this.registredControllers[name] = controller;
         },
         responseValidation: function () {
@@ -135,7 +135,7 @@ var NoReload = (function ($) {
 
     var routes = {
         registredRoutes: {},
-        registerRoute: function (params) {
+        register: function (params) {
             if (params.route === undefined)
                 throw 'invalid route name';
             if (params.controller === undefined)
@@ -153,6 +153,9 @@ var NoReload = (function ($) {
                 controller: params.controller,
                 ajax: params.ajax
             };
+        },
+        isRegistred: function (name) {
+            return routes.find(name) !== false;
         },
         find: function (route) {
             for (var key in this.registredRoutes) {
@@ -251,15 +254,6 @@ var NoReload = (function ($) {
                 var name = location.hash.replace(/^#/, '');
                 NR.load(name);
             });
-        },
-        registerRoute: function (params) {
-            routes.registerRoute(params);
-        },
-        isRegistredRoute: function (name) {
-            return routes.find(name) !== false;
-        },
-        registerController: function (name, controller) {
-            controllers.registerController(name, controller);
         },
         registerBeforeLoadEvent: function (name, event) {
             beforeLoadEvents[name] = event;
