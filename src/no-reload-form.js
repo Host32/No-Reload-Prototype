@@ -222,7 +222,7 @@
                     data: data,
                     success: function (response) {
                         if (callback) {
-                            NR.call(callback, response);
+                            NR.controllers.call(callback, response);
                         }
                         if (reload === true) {
                             NR.load(NR.getCurrentRoute(), response);
