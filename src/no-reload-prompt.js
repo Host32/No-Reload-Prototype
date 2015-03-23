@@ -1,39 +1,43 @@
 (function (NR, $) {
     NR.prompt = (function () {
-        var promptPrefix = 'jqismooth';
-        var promptQuestionPrefix = 'jqismooth';
-
         return {
             show: function (message) {
-                $.prompt(message, {
-                    prefix: promptPrefix
-                });
+                $('body').append(
+                    $('<DIV>')
+                    .append('<p>teste</p>')
+                    .dialog({
+                        modal: true,
+                        buttons: {
+                            Ok: function () {
+                                dialog.dialog("close");
+                            }
+                        },
+                        close: function () {
+                            $(this).remove();
+                        }
+                    })
+                );
             },
             showQuestion: function (question, callback) {
-                $.prompt(question, {
-                    buttons: {
-                        Sim: true,
-                        Não: false
-                    },
-                    prefix: promptQuestionPrefix,
-                    callback: function (e, v, m, f) {
-                        if (v) {
-                            callback();
+                $('body').append(
+                    $('<DIV>')
+                    .append('<p>' + question + '</p>')
+                    .dialog({
+                        modal: true,
+                        buttons: {
+                            Sim: function () {
+                                callback();
+                                $(this).dialog("close");
+                            },
+                            Não: function () {
+                                dialog.dialog("close");
+                            }
+                        },
+                        close: function () {
+                            $(this).remove();
                         }
-                    }
-                });
-            },
-            getPromptPrefix: function () {
-                return promptPrefix;
-            },
-            setPromptPrefix: function (prefix) {
-                promptPrefix = prefix;
-            },
-            getPromptQuestionPrefix: function () {
-                return promptQuestionPrefix;
-            },
-            setPromptQuestionPrefix: function (prefix) {
-                promptQuestionPrefix = prefix;
+                    })
+                );
             }
         };
     })();
