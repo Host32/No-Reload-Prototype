@@ -29,8 +29,13 @@
 
         var resolvePendents = function () {
             if (!--pendents) {
-                if (typeof pendentsRequest === 'string') {
-                    pendentCallback(templates[pendentsRequest]);
+                var requestLength = 0;
+                var lastRequestKey;
+                for (lastRequestKey in pendentsRequest) {
+                    requestLength++;
+                }
+                if (requestLength == 1) {
+                    pendentCallback(templates[pendentsRequest[lastRequestKey]]);
                 } else {
                     var temps = {};
                     for (var key in pendentsRequest) {
@@ -38,6 +43,7 @@
                     }
                     pendentCallback(temps);
                 }
+                pendentsRequest = {};
             }
         }
 
@@ -51,7 +57,8 @@
             callCompileEvents: callCompileEvents,
             loadSingle: function (name, optionalName) {
                 var alias = optionalName || name;
-                pendents++;
+
+                pendentsRequest[alias] = name;
                 if (typeof templates[name] === 'undefined') {
                     $.ajax({
                         url: formatTemplateUrl(name),
@@ -59,10 +66,10 @@
                         dataType: "html",
                         cache: true,
                         success: function (template) {
-                            templates[alias] = template;
+                            templates[name] = template;
                         },
                         error: function () {
-                            templates[alias] = 'Template não encontrado'
+                            templates[name] = 'Template não encontrado'
                         },
                         complete: function () {
                             resolvePendents();
@@ -78,35 +85,39 @@
                 }
             },
             load: function (map, callback) {
-                if (typeof callback !== 'undefined') {
-                    this.then(callback);
+                if (typeof callback === 'undefined') {
+                    callback = function () {};
                 }
+                pendentCallback = callback;
 
-                pendentsRequest = map;
                 if (typeof map === 'string') {
+                    pendents++;
                     this.loadSingle(map);
                 } else {
+                    for (var name in map) {
+                        pendents++;
+                    }
                     this.loadMultiple(map);
                 }
+                return this;
             },
-            then: function (callback) {
-                pendentCallback = callback;
+            manualCompile: function (options) {
+                return new Ractive($.extend({}, {
+                    el: mainElement
+                }, options));
             },
-            compile: function (options, callback, data, onComplete) {
-                if (typeof data !== 'undefined') {
-                    this.oldCompile(options, callback, data, onComplete);
-                    return;
-                }
-
+            compile: function (options, callback) {
                 var templates;
                 if ($.isArray(options)) {
                     for (var key in options) {
                         templates[options[key].template] = options[key].template;
                     }
+                } else if (typeof options === 'string') {
+                    templates = options;
                 } else {
-                    templates[options.template] = options.template;
+                    templates = options.template;
                 }
-                this.load(templates).then(function (templates) {
+                this.load(templates, function (templates) {
                     var ret;
                     if ($.isArray(options)) {
                         for (var key in options) {
@@ -125,36 +136,9 @@
                         }));
                     }
                     callCompileEvents();
-                    callback(ret);
+                    if (typeof callback === 'function')
+                        callback(ret);
                 });
-            },
-            oldCompile: function (destino, templateName, data, onComplete) {
-                if (typeof destino === 'object') {
-                    return new Ractive(destino);
-                }
-                var t = this;
-                this.load(templateName, function (template) {
-                    var compiled = new Ractive({
-                        el: destino,
-                        template: template,
-                        data: data,
-                        onconstruct: function () {
-                            t.callCompileEvents();
-                            if (typeof onComplete === 'function') {
-                                onComplete(compiled);
-                            }
-                        }
-                    });
-                });
-            },
-            compileInMain: function (templateName, data, onComplete) {
-                if (typeof templateName === 'object') {
-                    var params = $.extend({}, templateName, {
-                        el: mainElement
-                    });
-                    return new Ractive(params);
-                }
-                this.oldCompile(mainElement, templateName, data, onComplete);
             },
             registerPartial: function (name) {
                 $.get(formatPartialUrl(name), function (response) {
