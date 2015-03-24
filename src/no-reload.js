@@ -74,23 +74,23 @@ var NoReload = (function ($) {
         }
     };
 
-    var controllers = {
-        registredControllers: {},
-        register: function (name, controller) {
-            this.registredControllers[name] = controller;
+    var modules = {
+        registred: {},
+        register: function (name, module) {
+            this.registred[name] = new module();
         },
-        responseValidation: function () {
+        validator: function () {
             return true;
         },
-        call: function (controllerFunc, params) {
-            if (typeof controllerFunc === 'string')
-                controllerFunc = this.getFunc(controllerFunc);
+        call: function (moduleFunc, params) {
+            if (typeof moduleFunc === 'string')
+                moduleFunc = this.getFunc(moduleFunc);
 
-            controllerFunc(params);
+            moduleFunc(params);
         },
-        safeCall: function (controller, params) {
-            if (this.responseValidation(params)) {
-                this.call(controller, params);
+        safeCall: function (module, params) {
+            if (this.validator(params)) {
+                this.call(module, params);
             }
         },
         getFunc: function (name) {
@@ -98,7 +98,7 @@ var NoReload = (function ($) {
             return function (params) {
                 var names = name.split(';');
                 for (var key in names) {
-                    var scope = c.registredControllers;
+                    var scope = c.registred;
                     var scopeSplit = name.split('.');
                     for (var i = 0; i < scopeSplit.length - 1; i++) {
                         scope = scope[scopeSplit[i]];
@@ -111,7 +111,7 @@ var NoReload = (function ($) {
             };
         },
         get: function (name) {
-            var scope = this.registredControllers;
+            var scope = this.registred;
             var scopeSplit = name.split('.');
             for (var i in scopeSplit) {
                 scope = scope[scopeSplit[i]];
@@ -121,7 +121,7 @@ var NoReload = (function ($) {
             return scope;
         },
         set: function (name, value) {
-            var scope = this.registredControllers;
+            var scope = this.registred;
             var scopeSplit = name.split('.');
             for (var i = 0; i < scopeSplit.length - 1; i++) {
                 scope = scope[scopeSplit[i]];
@@ -235,6 +235,171 @@ var NoReload = (function ($) {
         }
     };
 
+    var template = (function () {
+        var templatePath = '';
+        var templateFormat = '.html';
+        var partialsPath = '';
+        var partialsFormat = '.html';
+
+        var mainElement = 'body';
+
+        var templates = {};
+        var compileEvents = {};
+
+        var formatTemplateUrl = function (name) {
+            return templatePath + name + templateFormat;
+        };
+        var formatPartialUrl = function (name) {
+            return partialsPath + name + partialsFormat;
+        };
+        var callCompileEvents = function () {
+            for (var key in compileEvents) {
+                compileEvents[key]();
+            }
+        };
+
+        var pendents = 0;
+        var pendentsRequest = {};
+        var pendentCallback;
+
+        var resolvePendents = function () {
+            if (!--pendents) {
+                var requestLength = 0;
+                var lastRequestKey;
+                for (lastRequestKey in pendentsRequest) {
+                    requestLength++;
+                }
+                if (requestLength == 1) {
+                    pendentCallback(templates[pendentsRequest[lastRequestKey]]);
+                } else {
+                    var temps = {};
+                    for (var key in pendentsRequest) {
+                        temps[key] = templates[pendentsRequest[key]];
+                    }
+                    pendentCallback(temps);
+                }
+                pendentsRequest = {};
+            }
+        }
+
+        return {
+            registerCompileEvent: function (name, callback) {
+                compileEvents[name] = callback;
+            },
+            unregisterCompileEvent: function (name) {
+                delete compileEvents[name];
+            },
+            callCompileEvents: callCompileEvents,
+            loadSingle: function (name, optionalName) {
+                var alias = optionalName || name;
+
+                pendentsRequest[alias] = name;
+                if (typeof templates[name] === 'undefined') {
+                    $.ajax({
+                        url: formatTemplateUrl(name),
+                        contentType: "text/html",
+                        dataType: "html",
+                        cache: true,
+                        success: function (template) {
+                            templates[name] = Ractive.extend({
+                                el: mainElement,
+                                template: template,
+                                oncomplete: function () {
+                                    callCompileEvents();
+                                }
+                            });
+                        },
+                        error: function () {
+                            templates[name] = Ractive.extend({
+                                el: mainElement,
+                                template: 'Template não encontrado'
+                            });
+                        },
+                        complete: function () {
+                            resolvePendents();
+                        }
+                    });
+                } else {
+                    resolvePendents();
+                }
+            },
+            loadMultiple: function (map) {
+                for (var name in map) {
+                    this.loadSingle(map[name], name);
+                }
+            },
+            load: function (map, callback) {
+                if (typeof callback === 'undefined') {
+                    callback = function () {};
+                }
+                pendentCallback = callback;
+
+                if (typeof map === 'string') {
+                    pendents++;
+                    this.loadSingle(map);
+                } else {
+                    for (var name in map) {
+                        pendents++;
+                    }
+                    this.loadMultiple(map);
+                }
+                return this;
+            },
+            compile: function (template, data) {
+                this.load(template, function (Component) {
+                    new Component({
+                        data: data
+                    });
+                });
+            },
+            registerPartial: function (name) {
+                $.get(formatPartialUrl(name), function (response) {
+                    Ractive.partials[name] = response;
+                });
+            },
+            registerHelper: function (name, func) {
+                Ractive.defaults.data[name] = func;
+            },
+            getTemplatePath: function () {
+                return templatePath;
+            },
+            setTemplatePath: function (path) {
+                templatePath = path;
+            },
+            getTemplateFormat: function () {
+                return templateFormat;
+            },
+            setTemplateFormat: function (path) {
+                templateFormat = path;
+            },
+            getPartialsPath: function () {
+                return partialsPath;
+            },
+            setPartialsPath: function (path) {
+                partialsPath = path;
+            },
+            getPartialsFormat: function () {
+                return partialsFormat;
+            },
+            setPartialsFormat: function (path) {
+                partialsFormat = path;
+            },
+            getMainElement: function () {
+                return mainElement;
+            },
+            setMainElement: function (path) {
+                mainElement = path;
+            }
+        };
+    })();
+
+    var websocket = (function () {
+
+        var __export__ = {};
+
+        return __export__;
+    })();
+
     function isAjax(routeDef, params) {
         return routeDef.definition.ajax && (selectedReloadPolicy === reloadPolicy.NEW_REQUEST || typeof params === 'undefined');
     }
@@ -245,8 +410,10 @@ var NoReload = (function ($) {
         afterLoad: afterLoad,
         utils: utils,
         ajax: ajax,
-        controllers: controllers,
+        modules: modules,
         routes: routes,
+        template: template,
+        websocket: websocket,
         startAnchorNavigation: function () {
             var NR = this;
             $(window).on('hashchange', function () {
@@ -291,7 +458,7 @@ var NoReload = (function ($) {
         },
         call: function (controller, params) {
             this.beforeLoad();
-            controllers.safeCall(controller, params);
+            modules.safeCall(controller, params);
             this.afterLoad();
         },
         getCurrentRoute: function () {
