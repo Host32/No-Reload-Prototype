@@ -345,9 +345,11 @@ var NoReload = (function ($) {
                 }
                 return this;
             },
-            compile: function (template, data) {
+            compile: function (template, data, dest) {
+                dest = dest || mainElement;
                 this.load(template, function (Component) {
                     new Component({
+                        el: dest,
                         data: data
                     });
                 });
