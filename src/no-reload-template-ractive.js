@@ -17,6 +17,29 @@
         var formatPartialUrl = function (name) {
             return partialsPath + name + partialsFormat;
         };
+        var callCompileEvents = function () {
+            for (var key in compileEvents) {
+                compileEvents[key]();
+            }
+        };
+
+        var pendents = 0;
+        var pendentsRequest = {};
+        var pendentCallback;
+
+        var resolvePendents = function () {
+            if (!--pendents) {
+                if (typeof pendentsRequest === 'string') {
+                    pendentCallback(templates[pendentsRequest]);
+                } else {
+                    var temps = {};
+                    for (var key in pendentsRequest) {
+                        temps[key] = templates[pendentsRequest[key]];
+                    }
+                    pendentCallback(temps);
+                }
+            }
+        }
 
         return {
             registerCompileEvent: function (name, callback) {
@@ -25,12 +48,10 @@
             unregisterCompileEvent: function (name) {
                 delete compileEvents[name];
             },
-            callCompileEvents: function () {
-                for (var key in compileEvents) {
-                    compileEvents[key]();
-                }
-            },
-            load: function (name, callback) {
+            callCompileEvents: callCompileEvents,
+            loadSingle: function (name, optionalName) {
+                var alias = optionalName || name;
+                pendents++;
                 if (typeof templates[name] === 'undefined') {
                     $.ajax({
                         url: formatTemplateUrl(name),
@@ -38,19 +59,76 @@
                         dataType: "html",
                         cache: true,
                         success: function (template) {
-                            templates[name] = template;
-                            callback(templates[name]);
+                            templates[alias] = template;
                         },
                         error: function () {
-                            templates[name] = 'Template não encontrado'
-                            callback(templates[name]);
+                            templates[alias] = 'Template não encontrado'
+                        },
+                        complete: function () {
+                            resolvePendents();
                         }
                     });
                 } else {
-                    callback(templates[name]);
+                    resolvePendents();
                 }
             },
-            compile: function (destino, templateName, data, onComplete) {
+            loadMultiple: function (map) {
+                for (var name in map) {
+                    this.loadSingle(map[name], name);
+                }
+            },
+            load: function (map, callback) {
+                if (typeof callback !== 'undefined') {
+                    this.then(callback);
+                }
+
+                pendentsRequest = map;
+                if (typeof map === 'string') {
+                    this.loadSingle(map);
+                } else {
+                    this.loadMultiple(map);
+                }
+            },
+            then: function (callback) {
+                pendentCallback = callback;
+            },
+            compile: function (options, callback, data, onComplete) {
+                if (typeof data !== 'undefined') {
+                    this.oldCompile(options, callback, data, onComplete);
+                    return;
+                }
+
+                var templates;
+                if ($.isArray(options)) {
+                    for (var key in options) {
+                        templates[options[key].template] = options[key].template;
+                    }
+                } else {
+                    templates[options.template] = options.template;
+                }
+                this.load(templates).then(function (templates) {
+                    var ret;
+                    if ($.isArray(options)) {
+                        for (var key in options) {
+                            var opt = $.extend({
+                                el: mainElement
+                            }, options[key], {
+                                template: templates[options[key].template]
+                            });
+                            ret[key] = new Ractive(opt);
+                        }
+                    } else {
+                        ret = new Ractive($.extend({
+                            el: mainElement
+                        }, options, {
+                            template: templates
+                        }));
+                    }
+                    callCompileEvents();
+                    callback(ret);
+                });
+            },
+            oldCompile: function (destino, templateName, data, onComplete) {
                 if (typeof destino === 'object') {
                     return new Ractive(destino);
                 }
@@ -76,7 +154,7 @@
                     });
                     return new Ractive(params);
                 }
-                this.compile(mainElement, templateName, data, onComplete);
+                this.oldCompile(mainElement, templateName, data, onComplete);
             },
             registerPartial: function (name) {
                 $.get(formatPartialUrl(name), function (response) {
