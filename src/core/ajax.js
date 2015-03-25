@@ -1,4 +1,4 @@
-module.exports = function (NR, $) {
+module.exports = function ($) {
 
     this.getDefaultParams = function (url) {
         var ajax = this;
@@ -12,7 +12,7 @@ module.exports = function (NR, $) {
         };
     };
     this.prepareUrl = function (location) {
-        return NR.getServerAddress() + location;
+        return window.NoReload.getServerAddress() + location;
     };
     this.error = function () {
         throw "Ajax Error";

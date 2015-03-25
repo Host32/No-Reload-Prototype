@@ -99,7 +99,7 @@
 	        }
 	    };
 
-	    var ajax = new Ajax(this, $);
+	    var ajax = new Ajax($);
 	    var modules = new Modules();
 	    var routes = new Routes();
 	    var template = new Templates($, Ractive);
@@ -187,7 +187,7 @@
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = function (NR, $) {
+	module.exports = function ($) {
 
 	    this.getDefaultParams = function (url) {
 	        var ajax = this;
@@ -201,7 +201,7 @@
 	        };
 	    };
 	    this.prepareUrl = function (location) {
-	        return NR.getServerAddress() + location;
+	        return window.NoReload.getServerAddress() + location;
 	    };
 	    this.error = function () {
 	        throw "Ajax Error";

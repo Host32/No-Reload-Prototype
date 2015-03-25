@@ -45,7 +45,7 @@ module.exports = function ($) {
         }
     };
 
-    var ajax = new Ajax(this, $);
+    var ajax = new Ajax($);
     var modules = new Modules();
     var routes = new Routes();
     var template = new Templates($, Ractive);
