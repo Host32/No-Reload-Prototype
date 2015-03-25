@@ -4,8 +4,7 @@ Full AJAX javascript framework
 ## Prerequisites
 
 * JQuery http://jquery.com/
-* Impromptu (for prompt plugin only) http://trentrichardson.com/Impromptu/
-* Handlebars (for template plugin only) http://handlebarsjs.com/
+* Ractive.js http://www.ractivejs.org/
 
 ## Usage example
 
@@ -16,7 +15,7 @@ Full AJAX javascript framework
 }
 ```
 
-#### Templates/home.hbs
+#### Templates/home.html
 ```html
 <div>
 {{hello}}
@@ -37,8 +36,12 @@ Full AJAX javascript framework
     // when this route has be loaded, an ajax request will be sent to the server
     // the response object is the server response
     
-    // compile( 'target element', 'template name', 'template data' )
-    NR.template.compile($('body'), 'home', response);
+    // compile is a Wrapper from Ractive
+    NR.template.compile({
+      template: 'home',
+      el: 'body',
+      data: response
+    });
   });
   
   // load the Route 
@@ -62,9 +65,8 @@ Full AJAX javascript framework
   <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
   
   <script type="text/javascript" src="JS/jquery.js"></script>
-  <script type="text/javascript" src="JS/handlebars-v3.0.0.js"></script>
-  <script type="text/javascript" src="JS/no-reload/no-reload-core.js"></script>
-  <script type="text/javascript" src="JS/no-reload/no-reload-template.js"></script>
+  <script type="text/javascript" src="JS/ractive.min.js"></script>
+  <script type="text/javascript" src="JS/no-reload/no-reload.min.js"></script>
   <script type="text/javascript" src="app.js"></script>
 </head>
 <body>
