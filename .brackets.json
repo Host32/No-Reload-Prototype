@@ -1,0 +1,16 @@
+{
+    "jscompiler": {
+        "outputs": [
+            {
+                "inputs": [
+                    "dist/no-reload.js"
+                ],
+                "output": "dist/no-reload.min.js",
+                "generateMap": true,
+                "mangle": true,
+                "Precompile": true,
+                "isolate": false
+            }
+        ]
+    }
+}
