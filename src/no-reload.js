@@ -345,13 +345,10 @@ var NoReload = (function ($) {
                 }
                 return this;
             },
-            compile: function (template, data, dest) {
-                dest = dest || mainElement;
-                this.load(template, function (Component) {
-                    new Component({
-                        el: dest,
-                        data: data
-                    });
+            compile: function (options) {
+                this.load(options.template, function (Component) {
+                    delete options.template;
+                    new Component(options);
                 });
             },
             registerPartial: function (name) {
