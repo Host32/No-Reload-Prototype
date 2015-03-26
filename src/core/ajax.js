@@ -2,7 +2,6 @@ module.exports = function ($) {
     this.getDefaultParams = function (url) {
         var ajax = this;
         return {
-            contentType: "application/json",
             dataType: "json",
             beforeSend: ajax.beforeSend,
             complete: ajax.complete,

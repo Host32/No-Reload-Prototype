@@ -220,6 +220,7 @@
                     type: type,
                     url: location,
                     data: data,
+                    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
                     success: function (response) {
                         if (callback) {
                             NR.modules.call(callback, response);
