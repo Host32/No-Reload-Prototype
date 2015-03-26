@@ -21,136 +21,131 @@ module.exports = function ($, Ractive) {
         }
     };
 
-    var pendents = 0;
-    var pendentsRequest = {};
-    var pendentCallback;
+    var deferreds = {};
 
-    var resolvePendents = function () {
-        if (!--pendents) {
-            var requestLength = 0;
-            var lastRequestKey;
-            for (lastRequestKey in pendentsRequest) {
-                requestLength++;
-            }
-            if (requestLength == 1) {
-                pendentCallback(templates[pendentsRequest[lastRequestKey]]);
-            } else {
-                var temps = {};
-                for (var key in pendentsRequest) {
-                    temps[key] = templates[pendentsRequest[key]];
+    var getTemplate = function (name, optionalName) {
+        var alias = optionalName || name;
+
+        if (typeof deferreds[name] === 'undefined') {
+            deferreds[name] = $.ajax({
+                url: formatTemplateUrl(name),
+                contentType: "text/html",
+                dataType: "html",
+                cache: true,
+                success: function (template) {
+                    templates[name] = Ractive.extend({
+                        el: mainElement,
+                        template: template,
+                        oncomplete: function () {
+                            callCompileEvents();
+                        }
+                    });
+                },
+                error: function () {
+                    templates[name] = Ractive.extend({
+                        el: mainElement,
+                        template: 'Template não encontrado',
+                        oncomplete: function () {
+                            callCompileEvents();
+                        }
+                    });
                 }
-                pendentCallback(temps);
-            }
-            pendentsRequest = {};
+            });
         }
-    }
+        return deferreds[name];
+    };
+    var loadOne = function (name) {
+        return new Ractive.Promise(function (resolve, reject) {
+            getTemplate(name).done(function () {
+                resolve(templates[name]);
+            });
+        });
+    };
+    var loadMultiple = function (map) {
+        return new Ractive.Promise(function (resolve, reject) {
+            var pendents = 0;
+            var results = {};
 
-    return {
-        registerCompileEvent: function (name, callback) {
-            compileEvents[name] = callback;
-        },
-        unregisterCompileEvent: function (name) {
-            delete compileEvents[name];
-        },
-        callCompileEvents: callCompileEvents,
-        loadSingle: function (name, optionalName) {
-            var alias = optionalName || name;
-
-            pendentsRequest[alias] = name;
-            if (typeof templates[name] === 'undefined') {
-                $.ajax({
-                    url: formatTemplateUrl(name),
-                    contentType: "text/html",
-                    dataType: "html",
-                    cache: true,
-                    success: function (template) {
-                        templates[name] = Ractive.extend({
-                            el: mainElement,
-                            template: template,
-                            oncomplete: function () {
-                                callCompileEvents();
-                            }
-                        });
-                    },
-                    error: function () {
-                        templates[name] = Ractive.extend({
-                            el: mainElement,
-                            template: 'Template não encontrado'
-                        });
-                    },
-                    complete: function () {
-                        resolvePendents();
+            var load = function (name) {
+                getTemplate(map[name], name).done(function () {
+                    results[name] = templates[map[name]];
+                    if (!--pendents) {
+                        resolve(results);
                     }
                 });
-            } else {
-                resolvePendents();
-            }
-        },
-        loadMultiple: function (map) {
-            for (var name in map) {
-                this.loadSingle(map[name], name);
-            }
-        },
-        load: function (map, callback) {
-            if (typeof callback === 'undefined') {
-                callback = function () {};
-            }
-            pendentCallback = callback;
+            };
 
-            if (typeof map === 'string') {
-                pendents++;
-                this.loadSingle(map);
-            } else {
-                for (var name in map) {
-                    pendents++;
+            for (var name in map) {
+                if (map.hasOwnProperty(name)) {
+                    pendents += 1;
+                    load(name);
                 }
-                this.loadMultiple(map);
             }
-            return this;
-        },
-        compile: function (options) {
-            this.load(options.template, function (Component) {
-                delete options.template;
-                new Component(options);
-            });
-        },
-        registerPartial: function (name) {
-            $.get(formatPartialUrl(name), function (response) {
-                Ractive.partials[name] = response;
-            });
-        },
-        registerHelper: function (name, func) {
-            Ractive.defaults.data[name] = func;
-        },
-        getTemplatePath: function () {
-            return templatePath;
-        },
-        setTemplatePath: function (path) {
-            templatePath = path;
-        },
-        getTemplateFormat: function () {
-            return templateFormat;
-        },
-        setTemplateFormat: function (path) {
-            templateFormat = path;
-        },
-        getPartialsPath: function () {
-            return partialsPath;
-        },
-        setPartialsPath: function (path) {
-            partialsPath = path;
-        },
-        getPartialsFormat: function () {
-            return partialsFormat;
-        },
-        setPartialsFormat: function (path) {
-            partialsFormat = path;
-        },
-        getMainElement: function () {
-            return mainElement;
-        },
-        setMainElement: function (path) {
-            mainElement = path;
+        });
+    };
+
+    this.callCompileEvents = callCompileEvents;
+    this.registerCompileEvent = function (name, callback) {
+        compileEvents[name] = callback;
+    };
+    this.unregisterCompileEvent = function (name) {
+        delete compileEvents[name];
+    };
+    this.load = function (map, callback) {
+        var promisse;
+        if (typeof map === 'string') {
+            promisse = loadOne(map);
+        } else {
+            promisse = loadMultiple(map);
         }
+        if (typeof callback === 'undefined')
+            return promisse;
+        else {
+            promisse.then(callback);
+        }
+    };
+    this.compile = function (options) {
+        this.load(options.template).then(function (Component) {
+            delete options.template;
+            new Component(options);
+        });
+    };
+    this.registerPartial = function (name) {
+        $.get(formatPartialUrl(name), function (response) {
+            Ractive.partials[name] = response;
+        });
+    };
+    this.registerHelper = function (name, func) {
+        Ractive.defaults.data[name] = func;
+    };
+    this.getTemplatePath = function () {
+        return templatePath;
+    };
+    this.setTemplatePath = function (path) {
+        templatePath = path;
+    };
+    this.getTemplateFormat = function () {
+        return templateFormat;
+    };
+    this.setTemplateFormat = function (path) {
+        templateFormat = path;
+    };
+    this.getPartialsPath = function () {
+        return partialsPath;
+    };
+    this.setPartialsPath = function (path) {
+        partialsPath = path;
+    };
+    this.getPartialsFormat = function () {
+        return partialsFormat;
+    };
+    this.setPartialsFormat = function (path) {
+        partialsFormat = path;
+    };
+    this.getMainElement = function () {
+        return mainElement;
+    };
+    this.setMainElement = function (path) {
+        mainElement = path;
     };
 };

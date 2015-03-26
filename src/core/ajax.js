@@ -1,5 +1,4 @@
 module.exports = function ($) {
-
     this.getDefaultParams = function (url) {
         var ajax = this;
         return {
