@@ -23,7 +23,7 @@ module.exports = function () {
             var names = name.split(';');
             for (var key in names) {
                 var scope = c.registred;
-                var scopeSplit = name.split('.');
+                var scopeSplit = names[key].split('.');
                 for (var i = 0; i < scopeSplit.length - 1; i++) {
                     scope = scope[scopeSplit[i]];
 
