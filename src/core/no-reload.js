@@ -85,6 +85,16 @@ module.exports = function($) {
         unregisterAfterLoadEvent: function(name) {
             delete afterLoadEvents[name];
         },
+        start: function(options) {
+            var opt = $.extend({}, {
+                url: options.url,
+                success: function(response) {
+                    NR.call(options.controller, response)
+                }
+            }, options);
+
+            ajax.run(opt);
+        },
         load: function(route, params) {
             route = route || defaultRoute;
             var routeDef = routes.find(route);
@@ -100,8 +110,8 @@ module.exports = function($) {
                         }
                     });
                 } else {
-                    if (params !== undefined)
-                        params.route = routeDef;
+                    params = params || {};
+                    params.route = routeDef;
                     NR.call(routeDef.definition.controller, params);
                 }
                 lastRoute = route;
