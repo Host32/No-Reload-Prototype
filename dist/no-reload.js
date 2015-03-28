@@ -58,10 +58,11 @@
 	var Templates = __webpack_require__(5);
 	var WebSocket = __webpack_require__(6);
 
-	module.exports = function ($) {
+	module.exports = function($) {
 	    'use strict';
 	    var serverAddress = '';
 	    var lastRoute = null;
+	    var defaultRoute = '';
 
 	    var reloadPolicy = {
 	        USE_RESPONSE: 0,
@@ -74,13 +75,13 @@
 
 
 	    var utils = {
-	        objectMerge: function (ob1, ob2) {
+	        objectMerge: function(ob1, ob2) {
 	            for (var key in ob2) {
 	                ob1[key] = ob2[key];
 	            }
 	            return ob1;
 	        },
-	        convertResponse: function (response) {
+	        convertResponse: function(response) {
 	            if (typeof response === 'string')
 	                response = JSON.parse(response);
 
@@ -88,12 +89,12 @@
 	        }
 	    };
 
-	    var beforeLoad = function () {
+	    var beforeLoad = function() {
 	        for (var key in beforeLoadEvents) {
 	            beforeLoadEvents[key]();
 	        }
 	    };
-	    var afterLoad = function () {
+	    var afterLoad = function() {
 	        for (var key in afterLoadEvents) {
 	            afterLoadEvents[key]();
 	        }
@@ -119,34 +120,35 @@
 	        routes: routes,
 	        template: template,
 	        ws: ws,
-	        startAnchorNavigation: function () {
+	        startAnchorNavigation: function() {
 	            var NR = this;
-	            $(window).on('hashchange', function () {
+	            $(window).on('hashchange', function() {
 	                var name = location.hash.replace(/^#/, '');
 	                NR.load(name);
 	            });
 	        },
-	        registerBeforeLoadEvent: function (name, event) {
+	        registerBeforeLoadEvent: function(name, event) {
 	            beforeLoadEvents[name] = event;
 	        },
-	        unregisterBeforeLoadEvent: function (name) {
+	        unregisterBeforeLoadEvent: function(name) {
 	            delete beforeLoadEvents[name];
 	        },
-	        registerAfterLoadEvent: function (name, event) {
+	        registerAfterLoadEvent: function(name, event) {
 	            afterLoadEvents[name] = event;
 	        },
-	        unregisterAfterLoadEvent: function (name) {
+	        unregisterAfterLoadEvent: function(name) {
 	            delete afterLoadEvents[name];
 	        },
-	        load: function (route, params) {
+	        load: function(route, params) {
+	            route = route || defaultRoute;
 	            var routeDef = routes.find(route);
 	            var NR = this;
 	            if (routeDef) {
 	                if (isAjax(routeDef, params)) {
 	                    ajax.run({
-	                        url: routeDef.definition.route,
+	                        url: routeDef.serverRoute,
 	                        type: 'get',
-	                        success: function (response) {
+	                        success: function(response) {
 	                            response.route = routeDef;
 	                            NR.call(routeDef.definition.controller, response);
 	                        }
@@ -161,21 +163,27 @@
 	                throw "the route '" + route + "' has not yet been registered";
 	            }
 	        },
-	        call: function (controller, params) {
+	        call: function(controller, params) {
 	            this.beforeLoad();
 	            modules.safeCall(controller, params);
 	            this.afterLoad();
 	        },
-	        getCurrentRoute: function () {
+	        getCurrentRoute: function() {
 	            return lastRoute;
 	        },
-	        getServerAddress: function () {
+	        getDefaultRoute: function() {
+	            return defaultRoute;
+	        },
+	        setDefaultRoute: function(route) {
+	            defaultRoute = route;
+	        },
+	        getServerAddress: function() {
 	            return serverAddress;
 	        },
-	        setServerAddress: function (address) {
+	        setServerAddress: function(address) {
 	            serverAddress = address;
 	        },
-	        setReloadPolicy: function (policy) {
+	        setReloadPolicy: function(policy) {
 	            selectedReloadPolicy = policy;
 	        }
 	    };
@@ -220,7 +228,8 @@
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = function () {
+	module.exports = function() {
+	    'use strict';
 
 	    // The main path matching regexp utility.
 	    var PATH_REGEXP = new RegExp([
@@ -230,7 +239,7 @@
 	    ].join('|'), 'g');
 
 	    this.registredRoutes = {};
-	    this.register = function (params) {
+	    this.register = function(params) {
 	        if (params.route === undefined)
 	            throw 'invalid route name';
 	        if (params.controller === undefined)
@@ -245,43 +254,47 @@
 	        this.registredRoutes[alias] = {
 	            route: params.route,
 	            regExp: routeReg.regExp,
-	            params: routeReg.keys,
+	            keys: routeReg.keys,
 	            controller: params.controller,
 	            ajax: params.ajax
 	        };
 	    };
-	    this.isRegistred = function (name) {
+	    this.isRegistred = function(name) {
 	        return this.find(name) !== false;
 	    };
-	    this.find = function (name) {
+	    this.find = function(name) {
 	        for (var key in this.registredRoutes) {
 	            var route = this.registredRoutes[key];
 	            if (route.regExp.test(name)) {
 	                var matches = name.match(route.regExp);
 
+	                var serverRoute = route.route;
 	                for (var key2 in route.keys) {
-	                    matches[route.keys[key2]] = matches[key2];
+	                    var matchesKey = parseInt(key2, 10) + 1;
+	                    matches[route.keys[key2].name] = matches[matchesKey];
+	                    serverRoute = serverRoute.replace(":" + route.keys[key2].name, matches[matchesKey]);
 	                }
 
 	                return {
 	                    definition: route,
-	                    matches: matches
+	                    matches: matches,
+	                    serverRoute: serverRoute
 	                };
 	            }
 	        }
 	        return false;
 	    };
-	    this.escapeGroup = function (group) {
+	    this.escapeGroup = function(group) {
 	        return group.replace(/([=!:$\/()])/g, '\\$1');
 	    };
-	    this.pathtoRegexp = function (path) {
+	    this.pathtoRegexp = function(path) {
 	        var keys = [];
 	        var index = 0;
 
 	        var r = this;
 
 	        // Alter the path string into a usable regexp.
-	        path = path.replace(PATH_REGEXP, function (match, escaped, prefix, key, capture, group, suffix, escape) {
+	        path = path.replace(PATH_REGEXP, function(match, escaped, prefix, key, capture, group, suffix, escape) {
 	            // Avoiding re-escaping escaped characters.
 	            if (escaped) {
 	                return escaped;
