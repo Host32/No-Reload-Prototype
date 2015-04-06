@@ -164,6 +164,13 @@
                 }
                 return true;
             },
+            prompt: function (errorMessage) {
+                if (typeof NR.prompt !== 'undefined') {
+                    NR.prompt.show(errorMessage.replace(/\n/g, "<br />"));
+                } else {
+                    alert(errorMessage);
+                }
+            },
             validateForm: function (form, showPopup) {
                 var t = this;
                 var errorMessage = '';
@@ -176,11 +183,7 @@
                 });
 
                 if (foundError && showPopup) {
-                    if (typeof NR.prompt !== 'undefined') {
-                        NR.prompt.show(errorMessage.replace(/\n/g, "<br />"));
-                    } else {
-                        alert(errorMessage);
-                    }
+                    this.prompt(errorMessage);
                 }
 
                 return !foundError;
