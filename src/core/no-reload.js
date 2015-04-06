@@ -4,10 +4,11 @@ var Modules = require('./modules.js');
 var Templates = require('./templates.js');
 var WebSocket = require('./websocket.js');
 
-module.exports = function ($) {
+module.exports = function($) {
     'use strict';
     var serverAddress = '';
     var lastRoute = null;
+    var defaultRoute = '';
 
     var reloadPolicy = {
         USE_RESPONSE: 0,
@@ -20,13 +21,13 @@ module.exports = function ($) {
 
 
     var utils = {
-        objectMerge: function (ob1, ob2) {
+        objectMerge: function(ob1, ob2) {
             for (var key in ob2) {
                 ob1[key] = ob2[key];
             }
             return ob1;
         },
-        convertResponse: function (response) {
+        convertResponse: function(response) {
             if (typeof response === 'string')
                 response = JSON.parse(response);
 
@@ -34,12 +35,12 @@ module.exports = function ($) {
         }
     };
 
-    var beforeLoad = function () {
+    var beforeLoad = function() {
         for (var key in beforeLoadEvents) {
             beforeLoadEvents[key]();
         }
     };
-    var afterLoad = function () {
+    var afterLoad = function() {
         for (var key in afterLoadEvents) {
             afterLoadEvents[key]();
         }
@@ -65,41 +66,52 @@ module.exports = function ($) {
         routes: routes,
         template: template,
         ws: ws,
-        startAnchorNavigation: function () {
+        startAnchorNavigation: function() {
             var NR = this;
-            $(window).on('hashchange', function () {
+            $(window).on('hashchange', function() {
                 var name = location.hash.replace(/^#/, '');
                 NR.load(name);
             });
         },
-        registerBeforeLoadEvent: function (name, event) {
+        registerBeforeLoadEvent: function(name, event) {
             beforeLoadEvents[name] = event;
         },
-        unregisterBeforeLoadEvent: function (name) {
+        unregisterBeforeLoadEvent: function(name) {
             delete beforeLoadEvents[name];
         },
-        registerAfterLoadEvent: function (name, event) {
+        registerAfterLoadEvent: function(name, event) {
             afterLoadEvents[name] = event;
         },
-        unregisterAfterLoadEvent: function (name) {
+        unregisterAfterLoadEvent: function(name) {
             delete afterLoadEvents[name];
         },
-        load: function (route, params) {
+        start: function(options) {
+            var opt = $.extend({}, {
+                url: options.url,
+                success: function(response) {
+                    NR.call(options.controller, response)
+                }
+            }, options);
+
+            ajax.run(opt);
+        },
+        load: function(route, params) {
+            route = route || defaultRoute;
             var routeDef = routes.find(route);
             var NR = this;
             if (routeDef) {
                 if (isAjax(routeDef, params)) {
                     ajax.run({
-                        url: routeDef.definition.route,
+                        url: routeDef.serverRoute,
                         type: 'get',
-                        success: function (response) {
+                        success: function(response) {
                             response.route = routeDef;
                             NR.call(routeDef.definition.controller, response);
                         }
                     });
                 } else {
-                    if (params !== undefined)
-                        params.route = routeDef;
+                    params = params || {};
+                    params.route = routeDef;
                     NR.call(routeDef.definition.controller, params);
                 }
                 lastRoute = route;
@@ -107,21 +119,27 @@ module.exports = function ($) {
                 throw "the route '" + route + "' has not yet been registered";
             }
         },
-        call: function (controller, params) {
+        call: function(controller, params) {
             this.beforeLoad();
             modules.safeCall(controller, params);
             this.afterLoad();
         },
-        getCurrentRoute: function () {
+        getCurrentRoute: function() {
             return lastRoute;
         },
-        getServerAddress: function () {
+        getDefaultRoute: function() {
+            return defaultRoute;
+        },
+        setDefaultRoute: function(route) {
+            defaultRoute = route;
+        },
+        getServerAddress: function() {
             return serverAddress;
         },
-        setServerAddress: function (address) {
+        setServerAddress: function(address) {
             serverAddress = address;
         },
-        setReloadPolicy: function (policy) {
+        setReloadPolicy: function(policy) {
             selectedReloadPolicy = policy;
         }
     };
