@@ -8,6 +8,8 @@ module.exports = function ($, Ractive) {
 
     var templates = {};
     var compileEvents = {};
+    var components = {};
+    var compiledComponents = {};
 
     var formatTemplateUrl = function (name) {
         return templatePath + name + templateFormat;
@@ -91,6 +93,26 @@ module.exports = function ($, Ractive) {
     this.unregisterCompileEvent = function (name) {
         delete compileEvents[name];
     };
+    this.registerComponent = function (name, options) {
+        components[name] = options;
+    };
+    this.loadComponent = function (name, callback) {
+        var self = this;
+        if (compiledComponents[name] === undefined) {
+            return new Ractive.Promise(function (resolve, reject) {
+                self.load(components[name].template).then(function (Component) {
+                    delete components[name].template;
+                    compiledComponents[name] = Component.extend(components[name]);
+
+                    resolve(compiledComponents[name]);
+                });
+            });
+        } else {
+            return new Ractive.Promise(function (resolve, reject) {
+                resolve(compiledComponents[name]);
+            });
+        }
+    };
     this.load = function (map, callback) {
         var promisse;
         if (typeof map === 'string') {
@@ -104,10 +126,14 @@ module.exports = function ($, Ractive) {
             promisse.then(callback);
         }
     };
-    this.compile = function (options) {
+    this.compile = function (options, callback) {
         this.load(options.template).then(function (Component) {
             delete options.template;
-            new Component(options);
+            var component = new Component(options);
+
+            if (typeof callback === 'function') {
+                callback(component);
+            }
         });
     };
     this.registerPartial = function (name) {
