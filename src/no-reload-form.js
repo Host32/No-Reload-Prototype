@@ -165,10 +165,12 @@
                 return true;
             },
             prompt: function (errorMessage) {
-                if (typeof NR.prompt !== 'undefined') {
-                    NR.prompt.show(errorMessage.replace(/\n/g, "<br />"));
-                } else {
-                    alert(errorMessage);
+                alert(errorMessage);
+            },
+            promptQuestion: function (message, callback) {
+                var confirmacao = confirm(message);
+                if (confirmacao) {
+                    callback();
                 }
             },
             validateForm: function (form, showPopup) {
@@ -207,7 +209,7 @@
                 var f = this;
                 if (this.validateForm($form, showPopup)) {
                     if (question) {
-                        NR.prompt.showQuestion(question, function () {
+                        f.promptQuestion(question, function () {
                             f.send(method, location, data, callback, reload);
                         });
                     } else {

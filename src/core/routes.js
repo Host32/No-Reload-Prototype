@@ -1,4 +1,4 @@
-module.exports = function() {
+module.exports = function () {
     'use strict';
 
     // The main path matching regexp utility.
@@ -9,7 +9,7 @@ module.exports = function() {
     ].join('|'), 'g');
 
     this.registredRoutes = {};
-    this.register = function(params) {
+    this.register = function (params) {
         if (params.route === undefined)
             throw 'invalid route name';
         if (params.controller === undefined)
@@ -29,10 +29,10 @@ module.exports = function() {
             ajax: params.ajax
         };
     };
-    this.isRegistred = function(name) {
+    this.isRegistred = function (name) {
         return this.find(name) !== false;
     };
-    this.find = function(name) {
+    this.find = function (name) {
         for (var key in this.registredRoutes) {
             var route = this.registredRoutes[key];
             if (route.regExp.test(name)) {
@@ -42,7 +42,8 @@ module.exports = function() {
                 for (var key2 in route.keys) {
                     var matchesKey = parseInt(key2, 10) + 1;
                     matches[route.keys[key2].name] = matches[matchesKey];
-                    serverRoute = serverRoute.replace(":" + route.keys[key2].name, matches[matchesKey]);
+                    var repl = matches[matchesKey] || '';
+                    serverRoute = serverRoute.replace(":" + route.keys[key2].name, repl);
                 }
 
                 return {
@@ -54,17 +55,17 @@ module.exports = function() {
         }
         return false;
     };
-    this.escapeGroup = function(group) {
+    this.escapeGroup = function (group) {
         return group.replace(/([=!:$\/()])/g, '\\$1');
     };
-    this.pathtoRegexp = function(path) {
+    this.pathtoRegexp = function (path) {
         var keys = [];
         var index = 0;
 
         var r = this;
 
         // Alter the path string into a usable regexp.
-        path = path.replace(PATH_REGEXP, function(match, escaped, prefix, key, capture, group, suffix, escape) {
+        path = path.replace(PATH_REGEXP, function (match, escaped, prefix, key, capture, group, suffix, escape) {
             // Avoiding re-escaping escaped characters.
             if (escaped) {
                 return escaped;
