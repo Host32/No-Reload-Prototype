@@ -1,5 +1,21 @@
 (function (NR, $) {
     'use strict';
+    $.fn.serializeObject = function () {
+        var o = {};
+        var a = this.serializeArray();
+        $.each(a, function () {
+            if (o[this.name]) {
+                if (!o[this.name].push) {
+                    o[this.name] = [o[this.name]];
+                }
+                o[this.name].push(this.value || '');
+            } else {
+                o[this.name] = this.value || '';
+            }
+        });
+        return o;
+    };
+
     NR.form = (function () {
         var formSeletor = 'form';
 
@@ -194,7 +210,6 @@
                 var $form = $(form);
 
                 var location = $form.attr('action');
-                var data = $form.serialize();
 
                 var reload = $form.attr('reload') || 'false';
                 reload = reload.toLowerCase() === 'false' ? false : (reload.toLowerCase() === 'true' ? true : reload);
@@ -203,6 +218,15 @@
                 var callback = $form.attr('callback') || false;
                 var question = $form.attr('question') || false;
 
+                var dataType = $form.attr('data-type') || "json";
+                var contentType = $form.attr('content-type') || "application/x-www-form-urlencoded; charset=UTF-8";
+
+                if (contentType === 'application/json') {
+                    var data = JSON.stringify($form.serializeObject());
+                } else {
+                    var data = $form.serialize();
+                }
+
                 var showPopup = $form.attr('show-error-popup') || 'true';
                 showPopup = showPopup.toLowerCase() === 'false' ? false : true;
 
@@ -210,14 +234,14 @@
                 if (this.validateForm($form, showPopup)) {
                     if (question) {
                         f.promptQuestion(question, function () {
-                            f.send(method, location, data, callback, reload);
+                            f.send(method, location, data, callback, reload, dataType, contentType);
                         });
                     } else {
-                        f.send(method, location, data, callback, reload);
+                        f.send(method, location, data, callback, reload, dataType, contentType);
                     }
                 }
             },
-            send: function (type, location, data, callback, reload) {
+            send: function (type, location, data, callback, reload, dataType, contentType) {
                 callback = callback || false;
                 reload = reload || false;
 
@@ -225,7 +249,8 @@
                     type: type,
                     url: location,
                     data: data,
-                    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                    dataType: dataType,
+                    contentType: contentType,
                     success: function (response) {
                         if (callback) {
                             NR.modules.call(callback, response);
