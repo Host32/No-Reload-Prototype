@@ -248,27 +248,26 @@
 	        '([.+*?=^!:${}()[\\]|\\/])'
 	    ].join('|'), 'g');
 
-	    var createDefaultTemplateController = function (template) {
-	        return function (response) {
-	            if (typeof template === 'string') {
-	                templateModule.compile({
-	                    template: template,
-	                    data: response
-	                });
-	            } else {
-	                template.data = response;
-	                templateModule.compile(template);
-	            }
-	        };
-	    };
-
 	    this.registredRoutes = {};
 	    this.register = function (params) {
 	        if (params.route === undefined)
 	            throw 'invalid route name';
 
 	        if (params.template !== undefined) {
-	            params.controller = createDefaultTemplateController(params.template);
+	            params.controller = function (response) {
+	                if (typeof params.template === 'string') {
+	                    NR.template.compile({
+	                        template: params.template,
+	                        data: response
+	                    });
+	                } else {
+	                    params.template.data = response;
+	                    var templateBkp = params.template.template;
+	                    NR.template.compile(params.template, function () {
+	                        params.template.template = templateBkp;
+	                    });
+	                }
+	            };
 	        } else if (params.controller === undefined) {
 	            params.controller = function () {};
 	        }
