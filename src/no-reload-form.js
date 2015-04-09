@@ -15,6 +15,9 @@
         });
         return o;
     };
+    $.fn.stringifySerializeObject = function () {
+        return JSON.stringify($(this).serializeObject());
+    };
 
     NR.form = (function () {
         var formSeletor = 'form';
@@ -218,67 +221,67 @@
 
                 return !foundError;
             },
+            getFormOptions: function (form) {
+                var $form = $(form);
+                var contentType = $form.attr('content-type') || 'application/x-www-form-urlencoded; charset=UTF-8';
+                var data = (contentType === 'application/json') ? $form.stringifySerializeObject() : $form.serialize();
+
+                var options = {
+                    form: $form,
+                    url: $form.attr('action'),
+                    type: ($form.attr('method') || 'get'),
+                    reload: extractReloadController($form.attr('reload') || 'false'),
+                    callback: ($form.attr('callback') || false),
+                    question: ($form.attr('question') || false),
+                    dataType: ($form.attr('data-type') || "json"),
+                    contentType: contentType,
+                    data: data
+
+                };
+                return options;
+            },
             submit: function (form) {
                 var $form = $(form);
-
-                var location = $form.attr('action');
-
-                var reload = $form.attr('reload') || 'false';
-                reload = reload.toLowerCase() === 'false' ? false : (reload.toLowerCase() === 'true' ? true : reload);
-
-                var method = $form.attr('method') || 'get';
-                var callback = $form.attr('callback') || false;
-                var question = $form.attr('question') || false;
-
-                var dataType = $form.attr('data-type') || "json";
-                var contentType = $form.attr('content-type') || "application/x-www-form-urlencoded; charset=UTF-8";
-
-                if (contentType === 'application/json') {
-                    var data = JSON.stringify($form.serializeObject());
-                } else {
-                    var data = $form.serialize();
-                }
-
                 var showPopup = $form.attr('show-error-popup') || 'true';
                 showPopup = showPopup.toLowerCase() === 'false' ? false : true;
 
-                var f = this;
                 if (this.validateForm($form, showPopup)) {
-                    if (question) {
-                        f.promptQuestion(question, function () {
-                            f.send($form, method, location, data, callback, reload, dataType, contentType);
+                    var options = this.getFormOptions(form);
+
+                    if (options.question) {
+                        var f = this;
+                        this.promptQuestion(options.question, function () {
+                            f.send(options);
                         });
                     } else {
-                        f.send($form, method, location, data, callback, reload, dataType, contentType);
+                        this.send(options);
                     }
                 }
             },
-            send: function ($form, type, location, data, callback, reload, dataType, contentType) {
-                callback = callback || false;
-                reload = reload || false;
+            send: function (options) {
+                //form, type, location, data, callback, reload, dataType, contentType) {
+                var callback = options.callback || false;
+                var reload = options.reload || false;
 
-                NR.ajax.run({
-                    type: type,
-                    url: location,
-                    data: data,
-                    dataType: dataType,
-                    contentType: contentType,
-                    success: function (response) {
+                options.success = function (response) {
+                    if (options.form) {
                         var event = new Event('response', {
                             data: response
                         });
-                        $form.dispatchEvent(event);
-
-                        if (callback) {
-                            NR.modules.call(callback, response);
-                        }
-                        if (reload === true) {
-                            NR.load(NR.getCurrentRoute(), response);
-                        } else if (reload) {
-                            NR.load(reload, response);
-                        }
+                        form.trigger(event);
                     }
-                });
+
+                    if (callback) {
+                        NR.modules.call(callback, response);
+                    }
+                    if (reload === true) {
+                        NR.reload(response);
+                    } else if (reload) {
+                        NR.load(reload, response);
+                    }
+                };
+
+                NR.ajax.run(options);
             },
             bind: function (seletor) {
                 this.unbind();
