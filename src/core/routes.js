@@ -1,4 +1,4 @@
-module.exports = function () {
+module.exports = function (templateModule) {
     'use strict';
 
     // The main path matching regexp utility.
@@ -8,12 +8,30 @@ module.exports = function () {
         '([.+*?=^!:${}()[\\]|\\/])'
     ].join('|'), 'g');
 
+    var createDefaultTemplateController = function (template) {
+        return function (response) {
+            if (typeof template === 'string') {
+                templateModule.compile({
+                    template: template,
+                    data: response
+                });
+            } else {
+                template.data = response;
+                templateModule.compile(template);
+            }
+        };
+    };
+
     this.registredRoutes = {};
     this.register = function (params) {
         if (params.route === undefined)
             throw 'invalid route name';
-        if (params.controller === undefined)
-            throw 'invalid route controller';
+
+        if (params.template !== undefined) {
+            params.controller = createDefaultTemplateController(params.template);
+        } else if (params.controller === undefined) {
+            params.controller = function () {};
+        }
 
         if (params.ajax === undefined)
             params.ajax = true;

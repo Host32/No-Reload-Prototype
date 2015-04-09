@@ -1,4 +1,4 @@
-(function (NR, $) {
+(function (NR, $, Ractive) {
     'use strict';
     $.fn.serializeObject = function () {
         var o = {};
@@ -124,6 +124,18 @@
 
         var validationErrorMessage = '';
 
+        Ractive.events.response = function (node, fire) {
+            node.addEventListener('response', function (event) {
+                event.preventDefault();
+
+                fire({
+                    node: node,
+                    original: event,
+                    data: event.data
+                });
+            });
+        };
+
         var __export__ = {
             registerValidation: function (name, func, messages) {
                 validations[name] = func;
@@ -234,14 +246,14 @@
                 if (this.validateForm($form, showPopup)) {
                     if (question) {
                         f.promptQuestion(question, function () {
-                            f.send(method, location, data, callback, reload, dataType, contentType);
+                            f.send($form, method, location, data, callback, reload, dataType, contentType);
                         });
                     } else {
-                        f.send(method, location, data, callback, reload, dataType, contentType);
+                        f.send($form, method, location, data, callback, reload, dataType, contentType);
                     }
                 }
             },
-            send: function (type, location, data, callback, reload, dataType, contentType) {
+            send: function ($form, type, location, data, callback, reload, dataType, contentType) {
                 callback = callback || false;
                 reload = reload || false;
 
@@ -252,6 +264,11 @@
                     dataType: dataType,
                     contentType: contentType,
                     success: function (response) {
+                        var event = new Event('response', {
+                            data: response
+                        });
+                        $form.dispatchEvent(event);
+
                         if (callback) {
                             NR.modules.call(callback, response);
                         }
@@ -285,4 +302,4 @@
 
         return __export__;
     })();
-})(NoReload, jQuery);
+})(NoReload, jQuery, Ractive);

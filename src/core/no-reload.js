@@ -48,104 +48,100 @@ module.exports = function ($) {
 
     var ajax = new Ajax($);
     var modules = new Modules();
-    var routes = new Routes();
     var template = new Templates($, Ractive);
+    var routes = new Routes(template);
     var ws = new WebSocket();
 
     function isAjax(routeDef, params) {
         return routeDef.definition.ajax && (selectedReloadPolicy === reloadPolicy.NEW_REQUEST || typeof params === 'undefined');
     }
 
-    var __export__ = {
-        reloadPolicy: reloadPolicy,
-        beforeLoad: beforeLoad,
-        afterLoad: afterLoad,
-        utils: utils,
-        ajax: ajax,
-        modules: modules,
-        routes: routes,
-        template: template,
-        ws: ws,
-        startAnchorNavigation: function () {
-            var NR = this;
-            $(window).on('hashchange', function () {
-                var name = location.hash.replace(/^#/, '');
-                NR.load(name);
-            });
-        },
-        registerBeforeLoadEvent: function (name, event) {
-            beforeLoadEvents[name] = event;
-        },
-        unregisterBeforeLoadEvent: function (name) {
-            delete beforeLoadEvents[name];
-        },
-        registerAfterLoadEvent: function (name, event) {
-            afterLoadEvents[name] = event;
-        },
-        unregisterAfterLoadEvent: function (name) {
-            delete afterLoadEvents[name];
-        },
-        start: function (options) {
-            var opt = $.extend({}, {
-                url: options.url,
-                success: function (response) {
-                    NR.call(options.controller, response)
-                }
-            }, options);
-
-            ajax.run(opt);
-        },
-        reload: function () {
-            this.load(lastRoute);
-        },
-        load: function (route, params) {
-            route = route || defaultRoute;
-            var routeDef = routes.find(route);
-            var NR = this;
-            if (routeDef) {
-                if (isAjax(routeDef, params)) {
-                    ajax.run({
-                        url: routeDef.serverRoute,
-                        type: 'get',
-                        success: function (response) {
-                            response.route = routeDef;
-                            NR.call(routeDef.definition.controller, response);
-                        }
-                    });
-                } else {
-                    params = params || {};
-                    params.route = routeDef;
-                    NR.call(routeDef.definition.controller, params);
-                }
-                lastRoute = route;
-            } else {
-                throw "the route '" + route + "' has not yet been registered";
+    this.reloadPolicy = reloadPolicy;
+    this.beforeLoad = beforeLoad;
+    this.afterLoad = afterLoad;
+    this.utils = utils;
+    this.ajax = ajax;
+    this.modules = modules;
+    this.routes = routes;
+    this.template = template;
+    this.ws = ws;
+    this.startAnchorNavigation = function () {
+        var NR = this;
+        $(window).on('hashchange', function () {
+            var name = location.hash.replace(/^#/, '');
+            NR.load(name);
+        });
+    };
+    this.registerBeforeLoadEvent = function (name, event) {
+        beforeLoadEvents[name] = event;
+    };
+    this.unregisterBeforeLoadEvent = function (name) {
+        delete beforeLoadEvents[name];
+    };
+    this.registerAfterLoadEvent = function (name, event) {
+        afterLoadEvents[name] = event;
+    };
+    this.unregisterAfterLoadEvent = function (name) {
+        delete afterLoadEvents[name];
+    };
+    this.start = function (options) {
+        var opt = $.extend({}, {
+            url: options.url,
+            success: function (response) {
+                NR.call(options.controller, response)
             }
-        },
-        call: function (controller, params) {
-            this.beforeLoad();
-            modules.safeCall(controller, params);
-            this.afterLoad();
-        },
-        getCurrentRoute: function () {
-            return lastRoute;
-        },
-        getDefaultRoute: function () {
-            return defaultRoute;
-        },
-        setDefaultRoute: function (route) {
-            defaultRoute = route;
-        },
-        getServerAddress: function () {
-            return serverAddress;
-        },
-        setServerAddress: function (address) {
-            serverAddress = address;
-        },
-        setReloadPolicy: function (policy) {
-            selectedReloadPolicy = policy;
+        }, options);
+
+        ajax.run(opt);
+    };
+    this.reload = function () {
+        this.load(lastRoute);
+    };
+    this.load = function (route, params) {
+        route = route || defaultRoute;
+        var routeDef = routes.find(route);
+        var NR = this;
+        if (routeDef) {
+            if (isAjax(routeDef, params)) {
+                ajax.run({
+                    url: routeDef.serverRoute,
+                    type: 'get',
+                    success: function (response) {
+                        response.route = routeDef;
+                        NR.call(routeDef.definition.controller, response);
+                    }
+                });
+            } else {
+                params = params || {};
+                params.route = routeDef;
+                NR.call(routeDef.definition.controller, params);
+            }
+            lastRoute = route;
+        } else {
+            throw "the route '" + route + "' has not yet been registered";
         }
     };
-
-    return __export__;
+    this.call = function (controller, params) {
+        this.beforeLoad();
+        modules.safeCall(controller, params);
+        this.afterLoad();
+    };
+    this.getCurrentRoute = function () {
+        return lastRoute;
+    };
+    this.getDefaultRoute = function () {
+        return defaultRoute;
+    };
+    this.setDefaultRoute = function (route) {
+        defaultRoute = route;
+    };
+    this.getServerAddress = function () {
+        return serverAddress;
+    };
+    this.setServerAddress = function (address) {
+        serverAddress = address;
+    };
+    this.setReloadPolicy = function (policy) {
+        selectedReloadPolicy = policy;
+    };
 };
