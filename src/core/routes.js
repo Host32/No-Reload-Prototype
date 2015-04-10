@@ -22,7 +22,7 @@ module.exports = function (templateModule) {
                         data: response
                     });
                 } else {
-                    params.template.data = response;
+                    params.template.data = params.template.dataFilter ? params.template.dataFilter(response): response;
                     var templateBkp = params.template.template;
                     NR.template.compile(params.template, function () {
                         params.template.template = templateBkp;
