@@ -197,7 +197,7 @@
             return !foundError;
         };
         this.getCompEl = function (comp) {
-            return $('#' + comp.get('id'));
+            return $('#' + comp.get('formId'));
         }
         this.getFormOptions = function (comp) {
             var contentType = (comp.get('contentType') || 'application/x-www-form-urlencoded; charset=UTF-8');
@@ -214,7 +214,6 @@
                 data: data
             };
 
-            console.log(options);
             return options;
         };
         this.send = function (options) {
@@ -223,13 +222,6 @@
             var reload = options.reload || false;
 
             options.success = function (response) {
-                if (options.form) {
-                    var event = new Event('response', {
-                        data: response
-                    });
-                    form.trigger(event);
-                }
-
                 if (callback) {
                     NR.modules.call(callback, response);
                 }
@@ -269,7 +261,7 @@
     });
 
     var formWidget = Ractive.extend({
-        template: '<form item="{{item}}" id="{{id}}" class="nr-form {{class}}" action="{{action}}" method="{{method || "get"}}" contentType="{{contentType || "application/x-www-form-urlencoded; charset=UTF-8"}}" reload="{{reloat || "false"}}" {{#if question}}question="{{question}}"{{/if}} {{#if callback}}callback="{{callback}}"{{/if}} {{#if showErrorPopup}}showErrorPopup="{{showErrorPopup}}"{{/if}} on-submit="envia">{{>content}}</form>',
+        template: '<form item="{{item}}" id="{{formId}}" class="nr-form {{class}}" action="{{action}}" method="{{method || "get"}}" contentType="{{contentType || "application/x-www-form-urlencoded; charset=UTF-8"}}" reload="{{reloat || "false"}}" {{#if question}}question="{{question}}"{{/if}} {{#if callback}}callback="{{callback}}"{{/if}} {{#if showErrorPopup}}showErrorPopup="{{showErrorPopup}}"{{/if}} on-submit="envia">{{>content}}</form>',
         onrender: function () {
 
             this.on('envia', function () {
@@ -278,5 +270,5 @@
         }
     });
 
-    Ractive.components.nrForm = formWidget;
+    Ractive.components['nr:form'] = formWidget;
 })(NoReload, jQuery, Ractive);
