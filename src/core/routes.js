@@ -15,6 +15,7 @@ module.exports = function (templateModule) {
 
         if (params.template !== undefined) {
             params.controller = function (response) {
+                delete response.route;
                 if (typeof params.template === 'string') {
                     NR.template.compile({
                         template: params.template,

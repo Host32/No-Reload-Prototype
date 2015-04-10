@@ -63,6 +63,7 @@
 	    var serverAddress = '';
 	    var lastRoute = null;
 	    var defaultRoute = '';
+	    var route404 = null;
 
 	    var reloadPolicy = {
 	        USE_RESPONSE: 0,
@@ -148,8 +149,8 @@
 
 	        ajax.run(opt);
 	    };
-	    this.reload = function () {
-	        this.load(lastRoute);
+	    this.reload = function (params) {
+	        this.load(lastRoute, params);
 	    };
 	    this.load = function (route, params) {
 	        route = route || defaultRoute;
@@ -171,6 +172,11 @@
 	                NR.call(routeDef.definition.controller, params);
 	            }
 	            lastRoute = route;
+	        } else if (route404) {
+	            routeDef = routes.find(route404);
+	            if (routeDef) {
+	                this.load(route404);
+	            }
 	        } else {
 	            throw "the route '" + route + "' has not yet been registered";
 	        }
@@ -198,8 +204,10 @@
 	    this.setReloadPolicy = function (policy) {
 	        selectedReloadPolicy = policy;
 	    };
+	    this.setRoute404 = function (routeName) {
+	        route404 = routeName;
+	    };
 	};
-
 
 /***/ },
 /* 2 */
@@ -255,6 +263,7 @@
 
 	        if (params.template !== undefined) {
 	            params.controller = function (response) {
+	                delete response.route;
 	                if (typeof params.template === 'string') {
 	                    NR.template.compile({
 	                        template: params.template,
@@ -371,7 +380,6 @@
 	        };
 	    };
 	};
-
 
 /***/ },
 /* 4 */

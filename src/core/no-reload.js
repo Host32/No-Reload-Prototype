@@ -9,6 +9,7 @@ module.exports = function ($) {
     var serverAddress = '';
     var lastRoute = null;
     var defaultRoute = '';
+    var route404 = null;
 
     var reloadPolicy = {
         USE_RESPONSE: 0,
@@ -94,8 +95,8 @@ module.exports = function ($) {
 
         ajax.run(opt);
     };
-    this.reload = function () {
-        this.load(lastRoute);
+    this.reload = function (params) {
+        this.load(lastRoute, params);
     };
     this.load = function (route, params) {
         route = route || defaultRoute;
@@ -117,6 +118,11 @@ module.exports = function ($) {
                 NR.call(routeDef.definition.controller, params);
             }
             lastRoute = route;
+        } else if (route404) {
+            routeDef = routes.find(route404);
+            if (routeDef) {
+                this.load(route404);
+            }
         } else {
             throw "the route '" + route + "' has not yet been registered";
         }
@@ -143,5 +149,8 @@ module.exports = function ($) {
     };
     this.setReloadPolicy = function (policy) {
         selectedReloadPolicy = policy;
+    };
+    this.setRoute404 = function (routeName) {
+        route404 = routeName;
     };
 };
