@@ -344,7 +344,7 @@
 	            type = 'static';
 	        }
 
-	        this.registered[alias] = {
+	        registered[alias] = {
 	            path: route.path || route.route,
 	            regExp: routeReg.regExp,
 	            keys: routeReg.keys,
@@ -358,11 +358,11 @@
 	    this.find = function (path) {
 	        var key, route;
 
-	        for (key in this.registered) {
-	            if (this.registered.hasOwnProperty(key)) {
-	                route = this.registered[key];
+	        for (key in registered) {
+	            if (registered.hasOwnProperty(key)) {
+	                route = registered[key];
 	                if (route.regExp.test(path)) {
-	                    return routes.createRouteObject(route, path);
+	                    return Routes.createRouteObject(route, path);
 	                }
 	            }
 	        }
@@ -372,9 +372,9 @@
 	    this.isRegistered = function (path) {
 	        var key, route;
 
-	        for (key in this.registered) {
-	            if (this.registered.hasOwnProperty(key)) {
-	                route = this.registered[key];
+	        for (key in registered) {
+	            if (registered.hasOwnProperty(key)) {
+	                route = registered[key];
 	                if (route.regExp.test(path)) {
 	                    return true;
 	                }
@@ -485,7 +485,6 @@
 
 	/*global module*/
 	module.exports = Routes;
-
 
 /***/ },
 /* 4 */
@@ -996,6 +995,7 @@
 
 	/*global module*/
 	module.exports = Prompt;
+
 
 /***/ }
 /******/ ]);

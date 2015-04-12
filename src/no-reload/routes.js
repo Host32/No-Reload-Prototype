@@ -31,7 +31,7 @@ var Routes = function () {
             type = 'static';
         }
 
-        this.registered[alias] = {
+        registered[alias] = {
             path: route.path || route.route,
             regExp: routeReg.regExp,
             keys: routeReg.keys,
@@ -45,9 +45,9 @@ var Routes = function () {
     this.find = function (path) {
         var key, route;
 
-        for (key in this.registered) {
-            if (this.registered.hasOwnProperty(key)) {
-                route = this.registered[key];
+        for (key in registered) {
+            if (registered.hasOwnProperty(key)) {
+                route = registered[key];
                 if (route.regExp.test(path)) {
                     return Routes.createRouteObject(route, path);
                 }
@@ -59,9 +59,9 @@ var Routes = function () {
     this.isRegistered = function (path) {
         var key, route;
 
-        for (key in this.registered) {
-            if (this.registered.hasOwnProperty(key)) {
-                route = this.registered[key];
+        for (key in registered) {
+            if (registered.hasOwnProperty(key)) {
+                route = registered[key];
                 if (route.regExp.test(path)) {
                     return true;
                 }
