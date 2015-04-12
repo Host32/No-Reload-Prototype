@@ -49,7 +49,7 @@ var Routes = function () {
             if (this.registered.hasOwnProperty(key)) {
                 route = this.registered[key];
                 if (route.regExp.test(path)) {
-                    return routes.createRouteObject(route, path);
+                    return Routes.createRouteObject(route, path);
                 }
             }
         }
