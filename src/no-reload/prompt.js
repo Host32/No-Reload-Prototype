@@ -13,3 +13,6 @@ var Prompt = function () {
         alert(message);
     };
 };
+
+/*global module*/
+module.exports = Prompt;

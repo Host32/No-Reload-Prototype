@@ -994,6 +994,8 @@
 	    };
 	};
 
+	/*global module*/
+	module.exports = Prompt;
 
 /***/ }
 /******/ ]);
