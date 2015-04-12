@@ -1,3 +1,8 @@
-var NoReload = require('./core/no-reload.js');
+(function () {
+    'use strict';
 
-window.NR = window.NoReload = new NoReload(jQuery);
+    /*global require*/
+    var NoReload = require('./no-reload/core.js');
+
+    window.NR = window.NoReload = new NoReload(window.jQuery, window.Ractive);
+}());
