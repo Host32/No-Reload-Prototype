@@ -49,11 +49,42 @@ var Routes = function () {
             if (registered.hasOwnProperty(key)) {
                 route = registered[key];
                 if (route.regExp.test(path)) {
-                    return Routes.createRouteObject(route, path);
+                    return routes.createRouteObject(route, path);
                 }
             }
         }
         return null;
+    };
+
+
+    /**
+     * Create a route description object from a route and a path
+     * @param   {Object} route      registered Route
+     * @param   {String} calledPath path called from a `load`
+     * @returns {Object} route description
+     */
+    this.createRouteObject = function (route, calledPath) {
+        'use strict';
+        var matches = calledPath.match(route.regExp),
+            routePath = route.path,
+            replace,
+            matchedKey,
+            key;
+
+        for (key in route.keys) {
+            if (route.keys.hasOwnProperty(key)) {
+                matchedKey = parseInt(key, 10) + 1;
+                matches[route.keys[key].name] = matches[matchedKey];
+                replace = matches[matchedKey] || '';
+                routePath = routePath.replace(":" + route.keys[key].name, replace);
+            }
+        }
+
+        return {
+            definition: route,
+            matches: matches,
+            path: routePath
+        };
     };
 
     this.isRegistered = function (path) {
@@ -68,36 +99,6 @@ var Routes = function () {
             }
         }
         return false;
-    };
-};
-
-/**
- * Create a route description object from a route and a path
- * @param   {Object} route      registered Route
- * @param   {String} calledPath path called from a `load`
- * @returns {Object} route description
- */
-Routes.prototype.createRouteObject = function (route, calledPath) {
-    'use strict';
-    var matches = calledPath.match(route.regExp),
-        routePath = route.path,
-        replace,
-        matchedKey,
-        key;
-
-    for (key in route.keys) {
-        if (route.keys.hasOwnProperty(key)) {
-            matchedKey = parseInt(key, 10) + 1;
-            matches[route.keys[key].name] = matches[matchedKey];
-            replace = matches[matchedKey] || '';
-            routePath = routePath.replace(":" + route.keys[key].name, replace);
-        }
-    }
-
-    return {
-        definition: route,
-        matches: matches,
-        path: routePath
     };
 };
 
