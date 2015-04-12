@@ -1,6 +1,8 @@
 (function () {
     'use strict';
 
+    window.Ractive.DEBUG = false;
+
     /*global require*/
     var NoReload = require('./no-reload/core.js');
 

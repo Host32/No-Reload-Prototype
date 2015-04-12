@@ -27,32 +27,58 @@ var NoReload = function ($, Ractive) {
             return routeObj.definition.type === 'ajax' && params === undefined;
         },
 
+        getTemplateUrl = function (templateDef) {
+            return (typeof templateDef === 'string') ? templateDef : templateDef.url;
+        },
+
+        formatTemplateOptions = function (templateDef, data) {
+            if (typeof templateDef === 'string') {
+                return {
+                    data: data
+                };
+            } else {
+                templateDef.data = data;
+                return templateDef;
+            }
+        },
+
+        formatData = function (routeDef, data) {
+            return routeDef.model ? new routeDef.model(data) : data;
+        },
+
         /**
          * Takes appropriate action in accordance with the definition of the route
          * @param {Object} routeDef - The route definition
          * @param {Object} params
          */
-        processRouteParams = function (routeDef, params) {
+        processRouteParams = function (routeObj, params) {
+            var routeDef = routeObj.definition;
+
             NR.events.trigger('beforeLoad', params);
 
             if (routeDef.template) {
-                NR.templates.load(routeDef.template.url).then(function (Component) {
-                    if (routeDef.model) {
-                        routeDef.template.data = new routeDef.model(params);
-                    } else {
-                        routeDef.template.data = params;
-                    }
-                    params.template = new Component(routeDef.template);
+                NR.templates.load(getTemplateUrl(routeDef.template)).then(function (Component) {
+                    var data, template;
+
+                    data = formatData(routeDef, params);
+                    template = new Component(formatTemplateOptions(routeDef.template, data));
 
                     if (routeDef.controller) {
-                        NR.call(routeDef.controller, params);
+                        NR.call(routeDef.controller, {
+                            data: data,
+                            template: template,
+                            route: routeObj
+                        });
                     }
 
                     NR.events.trigger('afterLoad', params);
 
                 });
             } else if (routeDef.controller) {
-                NR.call(routeDef.controller, params);
+                NR.call(routeDef.controller, {
+                    data: params,
+                    route: routeObj
+                });
                 NR.events.trigger('afterLoad', params);
             }
 
@@ -69,17 +95,11 @@ var NoReload = function ($, Ractive) {
                     url: routeObj.path,
                     type: 'get',
                     success: function (response) {
-                        processRouteParams(routeObj.definition, {
-                            data: response,
-                            route: routeObj
-                        });
+                        processRouteParams(routeObj, response);
                     }
                 });
             } else {
-                processRouteParams(routeObj.definition, {
-                    data: params || {},
-                    route: routeObj
-                });
+                processRouteParams(routeObj, params);
             }
         };
 
@@ -87,7 +107,7 @@ var NoReload = function ($, Ractive) {
     this.events = new Events();
     this.modules = new Modules();
     this.routes = new Routes();
-    this.templates = new Templates(Ractive, this.ajax);
+    this.templates = new Templates(Ractive, $);
     this.ws = new WebSockets();
     this.prompt = new Prompt();
     this.form = new Forms($, this, Ractive, this.prompt);

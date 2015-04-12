@@ -3,7 +3,7 @@
  * @param   {Object} Ractive - Ractive
  * @param   {Object} ajax - Ajax
  */
-var Templates = function (Ractive, ajax) {
+var Templates = function (Ractive, $) {
     'use strict';
     var templates = this,
         templatePath = '',
@@ -24,8 +24,8 @@ var Templates = function (Ractive, ajax) {
          * @returns {Object} - A deferreds with the ajax result
          */
         getTemplate = function (path) {
-            if (typeof deferreds[path] === 'undefined') {
-                deferreds[path] = ajax.run({
+            if (deferreds[path] === undefined) {
+                deferreds[path] = $.ajax({
                     url: templates.formatTemplateUrl(path),
                     contentType: "text/html",
                     dataType: "html",
@@ -131,7 +131,7 @@ var Templates = function (Ractive, ajax) {
     };
 
     this.registerPartial = function (path) {
-        ajax.run({
+        $.ajax({
             url: templates.formatPartialUrl(path),
             contentType: "text/html",
             dataType: "html",
