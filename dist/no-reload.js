@@ -44,147 +44,187 @@
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var NoReload = __webpack_require__(1);
+	(function () {
+	    'use strict';
 
-	window.NR = window.NoReload = new NoReload(jQuery);
+	    /*global require*/
+	    var NoReload = __webpack_require__(1);
+
+	    window.NR = window.NoReload = new NoReload(window.jQuery, window.Ractive);
+	}());
+
 
 /***/ },
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
+	/*global require*/
 	var Ajax = __webpack_require__(2);
 	var Routes = __webpack_require__(3);
 	var Modules = __webpack_require__(4);
 	var Templates = __webpack_require__(5);
-	var WebSocket = __webpack_require__(6);
+	var WebSockets = __webpack_require__(6);
+	var Events = __webpack_require__(7);
+	var Forms = __webpack_require__(8);
+	var Intervals = __webpack_require__(9);
+	var Timeouts = __webpack_require__(10);
+	var Prompt = __webpack_require__(11);
 
-	module.exports = function ($) {
+	/**
+	 * NoReload core class
+	 * @param {object} $        jQuery
+	 * @param {object} Ractive  Ractive
+	 */
+	var NoReload = function ($, Ractive) {
 	    'use strict';
-	    var serverAddress = '';
-	    var lastRoute = null;
-	    var defaultRoute = '';
-	    var route404 = null;
+	    var NR = this,
+	        serverAddress = '',
+	        defaultRoute = '',
+	        lastRoute = null,
+	        route404 = null,
 
-	    var reloadPolicy = {
-	        USE_RESPONSE: 0,
-	        NEW_REQUEST: 1
-	    };
-	    var selectedReloadPolicy = 0;
-
-	    var beforeLoadEvents = {};
-	    var afterLoadEvents = {};
-
-
-	    var utils = {
-	        objectMerge: function (ob1, ob2) {
-	            for (var key in ob2) {
-	                ob1[key] = ob2[key];
-	            }
-	            return ob1;
+	        isAjax = function (routeObj, params) {
+	            return routeObj.definition.type === 'ajax' && params === undefined;
 	        },
-	        convertResponse: function (response) {
-	            if (typeof response === 'string')
-	                response = JSON.parse(response);
 
-	            return response;
-	        }
+	        /**
+	         * Takes appropriate action in accordance with the definition of the route
+	         * @param {Object} routeDef - The route definition
+	         * @param {Object} params
+	         */
+	        processRouteParams = function (routeDef, params) {
+	            NR.events.trigger('beforeLoad', params);
+
+	            if (routeDef.template) {
+	                NR.templates.load(routeDef.template.url).then(function (Component) {
+	                    if (routeDef.model) {
+	                        routeDef.template.data = new routeDef.model(params);
+	                    } else {
+	                        routeDef.template.data = params;
+	                    }
+	                    params.template = new Component(routeDef.template);
+
+	                    if (routeDef.controller) {
+	                        NR.call(routeDef.controller, params);
+	                    }
+
+	                    NR.events.trigger('afterLoad', params);
+
+	                });
+	            } else if (routeDef.controller) {
+	                NR.call(routeDef.controller, params);
+	                NR.events.trigger('afterLoad', params);
+	            }
+
+	        },
+
+	        /**
+	         * Routes the framework according to the type of the route
+	         * @param {Object}   routeObj - The route Object
+	         * @param {*} params
+	         */
+	        doRoute = function (routeObj, params) {
+	            if (isAjax(routeObj, params)) {
+	                NR.ajax.run({
+	                    url: routeObj.path,
+	                    type: 'get',
+	                    success: function (response) {
+	                        processRouteParams(routeObj.definition, {
+	                            data: response,
+	                            route: routeObj
+	                        });
+	                    }
+	                });
+	            } else {
+	                processRouteParams(routeObj.definition, {
+	                    data: params || {},
+	                    route: routeObj
+	                });
+	            }
+	        };
+
+	    this.ajax = new Ajax(this, $);
+	    this.events = new Events();
+	    this.modules = new Modules();
+	    this.routes = new Routes();
+	    this.templates = new Templates(Ractive, this.ajax);
+	    this.ws = new WebSockets();
+	    this.prompt = new Prompt();
+	    this.form = new Forms($, this, Ractive, this.prompt);
+	    this.intervals = new Intervals();
+	    this.timeouts = new Timeouts();
+
+	    /**
+	     * Perform an ajax call to start the system
+	     * @param {Object} options - Ajax.run params
+	     */
+	    this.start = function (options) {
+	        var opt = $.extend({
+	            url: options.url,
+	            success: function (response) {
+	                NR.call(options.controller, response);
+	            }
+	        }, options);
+
+	        this.ajax.run(opt);
 	    };
 
-	    var beforeLoad = function () {
-	        for (var key in beforeLoadEvents) {
-	            beforeLoadEvents[key]();
+	    /**
+	     * Changes the system state making call to a route
+	     * @param {string} [route=defaultRoute] - The name of the route
+	     * @param {*} params - Optional params for the route,
+	     *                            if a param is passed the rout is called of static form
+	     */
+	    this.load = function (route, params) {
+	        route = route || defaultRoute;
+
+	        var routeObj = this.routes.find(route);
+	        if (routeObj) {
+	            doRoute(routeObj, params);
+	        } else if (route404) {
+	            routeObj = this.routes.find(route404);
+	            if (routeObj) {
+	                doRoute(routeObj, params);
+	            }
+	        } else {
+	            throw "the route '" + route + "' has not yet been registered";
 	        }
-	    };
-	    var afterLoad = function () {
-	        for (var key in afterLoadEvents) {
-	            afterLoadEvents[key]();
-	        }
+	        lastRoute = route;
 	    };
 
-	    var ajax = new Ajax($);
-	    var modules = new Modules();
-	    var template = new Templates($, Ractive);
-	    var routes = new Routes(template);
-	    var ws = new WebSocket();
+	    this.reload = function (params) {
+	        this.load(lastRoute, params);
+	    };
 
-	    function isAjax(routeDef, params) {
-	        return routeDef.definition.ajax && (selectedReloadPolicy === reloadPolicy.NEW_REQUEST || typeof params === 'undefined');
-	    }
+	    this.call = function (controller, params) {
+	        this.modules.call(controller, params);
+	    };
 
-	    this.reloadPolicy = reloadPolicy;
-	    this.beforeLoad = beforeLoad;
-	    this.afterLoad = afterLoad;
-	    this.utils = utils;
-	    this.ajax = ajax;
-	    this.modules = modules;
-	    this.routes = routes;
-	    this.template = template;
-	    this.ws = ws;
 	    this.startAnchorNavigation = function () {
-	        var NR = this;
 	        $(window).on('hashchange', function () {
 	            var name = location.hash.replace(/^#/, '');
 	            NR.load(name);
 	        });
 	    };
+
 	    this.registerBeforeLoadEvent = function (name, event) {
-	        beforeLoadEvents[name] = event;
+	        this.events.on('beforeLoad', name, event);
 	    };
 	    this.unregisterBeforeLoadEvent = function (name) {
-	        delete beforeLoadEvents[name];
+	        this.events.off('beforeLoad', name);
 	    };
 	    this.registerAfterLoadEvent = function (name, event) {
-	        afterLoadEvents[name] = event;
+	        this.events.on('afterLoad', name, event);
 	    };
 	    this.unregisterAfterLoadEvent = function (name) {
-	        delete afterLoadEvents[name];
+	        this.events.off('afterLoad', name);
 	    };
-	    this.start = function (options) {
-	        var opt = $.extend({}, {
-	            url: options.url,
-	            success: function (response) {
-	                NR.call(options.controller, response)
-	            }
-	        }, options);
 
-	        ajax.run(opt);
+	    this.getServerAddress = function () {
+	        return serverAddress;
 	    };
-	    this.reload = function (params) {
-	        this.load(lastRoute, params);
-	    };
-	    this.load = function (route, params) {
-	        route = route || defaultRoute;
-	        var routeDef = routes.find(route);
-	        var NR = this;
-	        if (routeDef) {
-	            if (isAjax(routeDef, params)) {
-	                ajax.run({
-	                    url: routeDef.serverRoute,
-	                    type: 'get',
-	                    success: function (response) {
-	                        response.route = routeDef;
-	                        NR.call(routeDef.definition.controller, response);
-	                    }
-	                });
-	            } else {
-	                params = params || {};
-	                params.route = routeDef;
-	                NR.call(routeDef.definition.controller, params);
-	            }
-	            lastRoute = route;
-	        } else if (route404) {
-	            routeDef = routes.find(route404);
-	            if (routeDef) {
-	                this.load(route404);
-	            }
-	        } else {
-	            throw "the route '" + route + "' has not yet been registered";
-	        }
-	    };
-	    this.call = function (controller, params) {
-	        this.beforeLoad();
-	        modules.safeCall(controller, params);
-	        this.afterLoad();
+	    this.setServerAddress = function (address) {
+	        serverAddress = address;
 	    };
 	    this.getCurrentRoute = function () {
 	        return lastRoute;
@@ -195,27 +235,37 @@
 	    this.setDefaultRoute = function (route) {
 	        defaultRoute = route;
 	    };
-	    this.getServerAddress = function () {
-	        return serverAddress;
-	    };
-	    this.setServerAddress = function (address) {
-	        serverAddress = address;
-	    };
-	    this.setReloadPolicy = function (policy) {
-	        selectedReloadPolicy = policy;
+	    this.getRoute404 = function () {
+	        return route404;
 	    };
 	    this.setRoute404 = function (routeName) {
 	        route404 = routeName;
 	    };
 	};
 
+	/*global module*/
+	module.exports = NoReload;
+
+
 /***/ },
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = function ($) {
-	    this.getDefaultParams = function (url) {
-	        var ajax = this;
+	/**
+	 * Ajax
+	 * @param {Object} NR - NoReload
+	 * @param {Object} $ - jQuery
+	 */
+	var Ajax = function (NR, $) {
+	    'use strict';
+	    var ajax = this;
+
+	    /**
+	     * Default parameteres
+	     *
+	     * @returns {Object} default configuration.
+	     */
+	    this.getDefaultParams = function () {
 	        return {
 	            dataType: "json",
 	            beforeSend: ajax.beforeSend,
@@ -224,360 +274,416 @@
 	            cache: false
 	        };
 	    };
+
+	    /**
+	     * Function URL format
+	     * @param   {string} location - Route URI
+	     * @returns {string} Complete URL from server
+	     */
 	    this.prepareUrl = function (location) {
-	        return window.NoReload.getServerAddress() + location;
+	        return NR.getServerAddress() + location;
 	    };
+
 	    this.error = function () {
 	        throw "Ajax Error";
 	    };
 	    this.beforeSend = function () {};
 	    this.complete = function () {};
+
+	    /**
+	     * Run a AJAX request
+	     * @param {Object} params - jQuery AJAX params
+	     */
 	    this.run = function (params) {
 	        var url = params.url || '';
 	        params.url = this.prepareUrl(url);
 
-	        params = $.extend({}, this.getDefaultParams(url), params);
+	        params = $.extend(this.getDefaultParams(url), params);
 
 	        $.ajax(params);
 	    };
 	};
+	/*global module*/
+	module.exports = Ajax;
+
 
 /***/ },
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = function (templateModule) {
+	/**
+	 * Routes manage class
+	 */
+	var Routes = function () {
 	    'use strict';
+	    var routes = this,
+	        registered = {};
 
-	    // The main path matching regexp utility.
-	    var PATH_REGEXP = new RegExp([
-	        '(\\\\.)',
-	        '([\\/.])?(?:\\:(\\w+)(?:\\(((?:\\\\.|[^)])*)\\))?|\\(((?:\\\\.|[^)])*)\\))([+*?])?',
-	        '([.+*?=^!:${}()[\\]|\\/])'
-	    ].join('|'), 'g');
+	    /**
+	     * Register a Route
+	     * @param {object} route - Route options.
+	     * @param {string} route.path - The server URI to which the route points,
+	     *                              if an alias is not informed, this will be the name
+	     *                              by which the route is found.
+	     * @param {(Object|string)} route.template - The ractive that will be responsible for
+	     *                                           handling route requests, if it is a string,
+	     *                                           it will be assumed that it is the url of the template.
+	     * @param {string} route.template.url - The url for which the framework should seek the template file
+	     * @param {Object} [route.model] - The object that will be passed as data to ractive,
+	     *                                 its constructor receives the response from the server as parameter.
+	     * @param {string} [route.alias=route.path] - The name by which the route is called
+	     * @param {string} [route.type=ajax] - The type of route, can be 'ajax', 'static' or 'websocket'
+	     */
+	    this.register = function (route) {
+	        var alias = route.alias || route.path || route.route,
 
-	    this.registredRoutes = {};
-	    this.register = function (params) {
-	        if (params.route === undefined)
-	            throw 'invalid route name';
+	            routeReg = this.pathtoRegexp(alias),
 
-	        if (params.template !== undefined) {
-	            params.controller = function (response) {
-	                delete response.route;
-	                if (typeof params.template === 'string') {
-	                    NR.template.compile({
-	                        template: params.template,
-	                        data: response
-	                    });
-	                } else {
-	                    params.template.data = response;
-	                    var templateBkp = params.template.template;
-	                    NR.template.compile(params.template, function () {
-	                        params.template.template = templateBkp;
-	                    });
-	                }
-	            };
-	        } else if (params.controller === undefined) {
-	            params.controller = function () {};
+	            type = route.type || 'ajax';
+	        if (route.ajax !== undefined && !route.ajax) {
+	            type = 'static';
 	        }
 
-	        if (params.ajax === undefined)
-	            params.ajax = true;
-
-	        var alias = params.alias || params.route;
-
-	        var routeReg = this.pathtoRegexp(alias);
-	        this.registredRoutes[alias] = {
-	            route: params.route,
+	        this.registered[alias] = {
+	            path: route.path || route.route,
 	            regExp: routeReg.regExp,
 	            keys: routeReg.keys,
-	            controller: params.controller,
-	            ajax: params.ajax
+	            type: type,
+	            model: route.model,
+	            template: route.template,
+	            controller: route.controller
 	        };
 	    };
-	    this.isRegistred = function (name) {
-	        return this.find(name) !== false;
-	    };
-	    this.find = function (name) {
-	        for (var key in this.registredRoutes) {
-	            var route = this.registredRoutes[key];
-	            if (route.regExp.test(name)) {
-	                var matches = name.match(route.regExp);
 
-	                var serverRoute = route.route;
-	                for (var key2 in route.keys) {
-	                    var matchesKey = parseInt(key2, 10) + 1;
-	                    matches[route.keys[key2].name] = matches[matchesKey];
-	                    var repl = matches[matchesKey] || '';
-	                    serverRoute = serverRoute.replace(":" + route.keys[key2].name, repl);
+	    this.find = function (path) {
+	        var key, route;
+
+	        for (key in this.registered) {
+	            if (this.registered.hasOwnProperty(key)) {
+	                route = this.registered[key];
+	                if (route.regExp.test(path)) {
+	                    return routes.createRouteObject(route, path);
 	                }
+	            }
+	        }
+	        return null;
+	    };
 
-	                return {
-	                    definition: route,
-	                    matches: matches,
-	                    serverRoute: serverRoute
-	                };
+	    this.isRegistered = function (path) {
+	        var key, route;
+
+	        for (key in this.registered) {
+	            if (this.registered.hasOwnProperty(key)) {
+	                route = this.registered[key];
+	                if (route.regExp.test(path)) {
+	                    return true;
+	                }
 	            }
 	        }
 	        return false;
 	    };
-	    this.escapeGroup = function (group) {
-	        return group.replace(/([=!:$\/()])/g, '\\$1');
-	    };
-	    this.pathtoRegexp = function (path) {
-	        var keys = [];
-	        var index = 0;
+	};
 
-	        var r = this;
+	/**
+	 * Create a route description object from a route and a path
+	 * @param   {Object} route      registered Route
+	 * @param   {String} calledPath path called from a `load`
+	 * @returns {Object} route description
+	 */
+	Routes.prototype.createRouteObject = function (route, calledPath) {
+	    'use strict';
+	    var matches = calledPath.match(route.regExp),
+	        routePath = route.path,
+	        replace,
+	        matchedKey,
+	        key;
 
-	        // Alter the path string into a usable regexp.
-	        path = path.replace(PATH_REGEXP, function (match, escaped, prefix, key, capture, group, suffix, escape) {
-	            // Avoiding re-escaping escaped characters.
-	            if (escaped) {
-	                return escaped;
-	            }
+	    for (key in route.keys) {
+	        if (route.keys.hasOwnProperty(key)) {
+	            matchedKey = parseInt(key, 10) + 1;
+	            matches[route.keys[key].name] = matches[matchedKey];
+	            replace = matches[matchedKey] || '';
+	            routePath = routePath.replace(":" + route.keys[key].name, replace);
+	        }
+	    }
 
-	            // Escape regexp special characters.
-	            if (escape) {
-	                return '\\' + escape;
-	            }
-
-	            var repeat = suffix === '+' || suffix === '*';
-	            var optional = suffix === '?' || suffix === '*';
-
-	            keys.push({
-	                name: key || index++,
-	                delimiter: prefix || '/',
-	                optional: optional,
-	                repeat: repeat
-	            });
-
-	            // Escape the prefix character.
-	            prefix = prefix ? '\\' + prefix : '';
-
-	            // Match using the custom capturing group, or fallback to capturing
-	            // everything up to the next slash (or next period if the param was
-	            // prefixed with a period).
-	            capture = r.escapeGroup(capture || group || '[^' + (prefix || '\\/') + ']+?');
-
-	            // Allow parameters to be repeated more than once.
-	            if (repeat) {
-	                capture = capture + '(?:' + prefix + capture + ')*';
-	            }
-
-	            // Allow a parameter to be optional.
-	            if (optional) {
-	                return '(?:' + prefix + '(' + capture + '))?';
-	            }
-
-	            // Basic parameter support.
-	            return prefix + '(' + capture + ')';
-	        });
-
-	        return {
-	            regExp: new RegExp('^' + path + '$'),
-	            keys: keys
-	        };
+	    return {
+	        definition: route,
+	        matches: matches,
+	        path: routePath
 	    };
 	};
+
+	Routes.prototype.PATH_REGEXP = new RegExp([
+	    '(\\\\.)',
+	    '([\\/.])?(?:\\:(\\w+)(?:\\(((?:\\\\.|[^)])*)\\))?|\\(((?:\\\\.|[^)])*)\\))([+*?])?',
+	    '([.+*?=^!:${}()[\\]|\\/])'
+	].join('|'), 'g');
+
+	Routes.prototype.escapeGroup = function (group) {
+	    'use strict';
+	    return group.replace(/([=!:$\/()])/g, '\\$1');
+	};
+
+	Routes.prototype.pathtoRegexp = function (path) {
+	    'use strict';
+	    var keys = [],
+	        index = 0;
+
+	    // Alter the path string into a usable regexp.
+	    path = path.replace(Routes.PATH_REGEXP, function (match, escaped, prefix, key, capture, group, suffix, escape) {
+	        // Avoiding re-escaping escaped characters.
+	        if (escaped) {
+	            return escaped;
+	        }
+
+	        // Escape regexp special characters.
+	        if (escape) {
+	            return '\\' + escape;
+	        }
+
+	        var repeat = suffix === '+' || suffix === '*',
+	            optional = suffix === '?' || suffix === '*';
+
+	        if (!key) {
+	            index += 1;
+	        }
+	        keys.push({
+	            name: key || index,
+	            delimiter: prefix || '/',
+	            optional: optional,
+	            repeat: repeat
+	        });
+
+	        // Escape the prefix character.
+	        prefix = prefix ? '\\' + prefix : '';
+
+	        // Match using the custom capturing group, or fallback to capturing
+	        // everything up to the next slash (or next period if the param was
+	        // prefixed with a period).
+	        capture = Routes.escapeGroup(capture || group || '[^' + (prefix || '\\/') + ']+?');
+
+	        // Allow parameters to be repeated more than once.
+	        if (repeat) {
+	            capture = capture + '(?:' + prefix + capture + ')*';
+	        }
+
+	        // Allow a parameter to be optional.
+	        if (optional) {
+	            return '(?:' + prefix + '(' + capture + '))?';
+	        }
+
+	        // Basic parameter support.
+	        return prefix + '(' + capture + ')';
+	    });
+
+	    return {
+	        regExp: new RegExp('^' + path + '$'),
+	        keys: keys
+	    };
+	};
+
+	/*global module*/
+	module.exports = Routes;
+
 
 /***/ },
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = function () {
-	    this.registred = {};
-	    this.register = function (name, module) {
-	        this.registred[name] = new module();
+	/**
+	 * Module Manage class
+	 */
+	var Modules = function () {
+	    'use strict';
+	    var modules = this,
+	        registered = {},
+	        interceptors = {},
+
+	        /**
+	         * Search by function among the registered modules
+	         * @param   {String}   name - Path of the function
+	         * @returns {function} - A function that can be call the searched function
+	         */
+	        getFunc = function (name) {
+	            return function (params) {
+	                var names = name.split(';'),
+	                    key,
+	                    scope,
+	                    scopeSplit,
+	                    i;
+
+	                for (key in names) {
+	                    if (names.hasOwnProperty(key)) {
+	                        scope = registered;
+	                        scopeSplit = names[key].split('.');
+	                        for (i = 0; i < scopeSplit.length - 1; i += 1) {
+	                            scope = scope[scopeSplit[i]];
+
+	                            if (scope === undefined) {
+	                                break;
+	                            }
+	                        }
+	                        if (scope !== undefined && scope[scopeSplit[scopeSplit.length - 1]] !== undefined) {
+	                            scope[scopeSplit[scopeSplit.length - 1]](params);
+	                        }
+	                    }
+	                }
+	            };
+	        };
+
+	    this.register = function (name, Module) {
+	        registered[name] = new Module();
 	    };
-	    this.validator = function () {
-	        return true;
+
+	    this.callInterceptors = function (params) {
+	        var name;
+	        for (name in interceptors) {
+	            if (interceptors.hasOwnProperty(name)) {
+	                interceptors[name](params);
+	            }
+	        }
 	    };
+	    this.registerInterceptor = function (name, func) {
+	        interceptors[name] = func;
+	    };
+
+	    /**
+	     * Call for the function name
+	     * @param {(string|function)} moduleFunc - The path of the function in the registered modules
+	     * @param {*} params - The params that be passed for the function
+	     */
 	    this.call = function (moduleFunc, params) {
-	        if (typeof moduleFunc === 'string')
-	            moduleFunc = this.getFunc(moduleFunc);
+	        this.callInterceptors(params);
+
+	        if (typeof moduleFunc === 'string') {
+	            moduleFunc = getFunc(moduleFunc);
+	        }
 
 	        moduleFunc(params);
 	    };
-	    this.safeCall = function (module, params) {
-	        if (this.validator(params)) {
-	            this.call(module, params);
-	        }
-	    };
-	    this.getFunc = function (name) {
-	        var c = this;
-	        return function (params) {
-	            var names = name.split(';');
-	            for (var key in names) {
-	                var scope = c.registred;
-	                var scopeSplit = names[key].split('.');
-	                for (var i = 0; i < scopeSplit.length - 1; i++) {
-	                    scope = scope[scopeSplit[i]];
-
-	                    if (scope === undefined) break;
-	                }
-	                if (scope === undefined || scope[scopeSplit[scopeSplit.length - 1]] === undefined) continue;
-	                scope[scopeSplit[scopeSplit.length - 1]](params);
-	            }
-	        };
-	    };
-	    this.get = function (name) {
-	            var scope = this.registred;
-	            var scopeSplit = name.split('.');
-	            for (var i in scopeSplit) {
-	                scope = scope[scopeSplit[i]];
-
-	                if (scope == undefined) return null;
-	            }
-	            return scope;
-	        },
-	        this.set = function (name, value) {
-	            var scope = this.registred;
-	            var scopeSplit = name.split('.');
-	            for (var i = 0; i < scopeSplit.length - 1; i++) {
-	                scope = scope[scopeSplit[i]];
-
-	                if (scope == undefined) throw 'Scope ' + name + ' has not found in registred controllers';
-	            }
-	            scope[scopeSplit[scopeSplit.length - 1]] = value;
-	        };
 	};
+
+	/*global module*/
+	module.exports = Modules;
+
 
 /***/ },
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = function ($, Ractive) {
-	    var templatePath = '';
-	    var templateFormat = '.html';
-	    var partialsPath = '';
-	    var partialsFormat = '.html';
+	/**
+	 * Template manager
+	 * @param   {Object} Ractive - Ractive
+	 * @param   {Object} ajax - Ajax
+	 */
+	var Templates = function (Ractive, ajax) {
+	    'use strict';
+	    var templates = this,
+	        templatePath = '',
+	        templateFormat = '.ract',
+	        partialsPath = '',
+	        partialsFormat = '.ract',
 
-	    var mainElement = 'body';
+	        ajaxCache = true,
 
-	    var templates = {};
-	    var compileEvents = {};
-	    var components = {};
-	    var compiledComponents = {};
+	        mainElement = 'body',
 
-	    var formatTemplateUrl = function (name) {
-	        return templatePath + name + templateFormat;
-	    };
-	    var formatPartialUrl = function (name) {
-	        return partialsPath + name + partialsFormat;
-	    };
-	    var callCompileEvents = function () {
-	        for (var key in compileEvents) {
-	            compileEvents[key]();
-	        }
-	    };
+	        cache = {},
+	        deferreds = {},
 
-	    var deferreds = {};
-
-	    var getTemplate = function (name, optionalName) {
-	        var alias = optionalName || name;
-
-	        if (typeof deferreds[name] === 'undefined') {
-	            deferreds[name] = $.ajax({
-	                url: formatTemplateUrl(name),
-	                contentType: "text/html",
-	                dataType: "html",
-	                cache: true,
-	                success: function (template) {
-	                    templates[name] = Ractive.extend({
-	                        el: mainElement,
-	                        template: template,
-	                        oncomplete: function () {
-	                            callCompileEvents();
-	                        }
-	                    });
-	                },
-	                error: function () {
-	                    templates[name] = Ractive.extend({
-	                        el: mainElement,
-	                        template: 'Template não encontrado',
-	                        oncomplete: function () {
-	                            callCompileEvents();
-	                        }
-	                    });
-	                }
-	            });
-	        }
-	        return deferreds[name];
-	    };
-	    var loadOne = function (name) {
-	        return new Ractive.Promise(function (resolve, reject) {
-	            getTemplate(name).done(function () {
-	                resolve(templates[name]);
-	            });
-	        });
-	    };
-	    var loadMultiple = function (map) {
-	        return new Ractive.Promise(function (resolve, reject) {
-	            var pendents = 0;
-	            var results = {};
-
-	            var load = function (name) {
-	                getTemplate(map[name], name).done(function () {
-	                    results[name] = templates[map[name]];
-	                    if (!--pendents) {
-	                        resolve(results);
+	        /**
+	         * Do the ajax call looking for template
+	         * @param   {string} path - The URI of the template
+	         * @returns {Object} - A deferreds with the ajax result
+	         */
+	        getTemplate = function (path) {
+	            if (typeof deferreds[path] === 'undefined') {
+	                deferreds[path] = ajax.run({
+	                    url: templates.formatTemplateUrl(path),
+	                    contentType: "text/html",
+	                    dataType: "html",
+	                    cache: ajaxCache,
+	                    success: function (template) {
+	                        cache[path] = templates.createRactive(template);
+	                    },
+	                    error: function () {
+	                        cache[path] = templates.createRactive('Template não encontrado');
 	                    }
 	                });
-	            };
-
-	            for (var name in map) {
-	                if (map.hasOwnProperty(name)) {
-	                    pendents += 1;
-	                    load(name);
-	                }
 	            }
-	        });
-	    };
-
-	    this.callCompileEvents = callCompileEvents;
-	    this.registerCompileEvent = function (name, callback) {
-	        compileEvents[name] = callback;
-	    };
-	    this.unregisterCompileEvent = function (name) {
-	        delete compileEvents[name];
-	    };
-	    this.registerComponent = function (name, options) {
-	        components[name] = options;
-	    };
-	    this.loadComponent = function (name, callback) {
-	        var self = this;
-	        if (compiledComponents[name] === undefined) {
+	            return deferreds[path];
+	        },
+	        /**
+	         * Return a promisse with a Ractive with the template file contents
+	         * @param   {string} path - The URI of the template
+	         * @returns {Object}
+	         */
+	        loadOne = function (path) {
 	            return new Ractive.Promise(function (resolve, reject) {
-	                self.load(components[name].template).then(function (Component) {
-	                    delete components[name].template;
-	                    compiledComponents[name] = Component.extend(components[name]);
-
-	                    resolve(compiledComponents[name]);
+	                getTemplate(path).done(function () {
+	                    resolve(cache[path]);
 	                });
 	            });
-	        } else {
+	        },
+	        /**
+	         * Load multiple template files
+	         * @param   {Object} map - A list of templates
+	         * @returns {Object} - A promise with a Ractive with the template files contents
+	         */
+	        loadMultiple = function (map) {
 	            return new Ractive.Promise(function (resolve, reject) {
-	                resolve(compiledComponents[name]);
+	                var pendents = 0,
+	                    results = {},
+	                    name,
+
+	                    load = function (path) {
+	                        getTemplate(map[path]).done(function () {
+	                            results[path] = cache[map[path]];
+	                            pendents -= 1;
+	                            if (!pendents) {
+	                                resolve(results);
+	                            }
+	                        });
+	                    };
+
+	                for (name in map) {
+	                    if (map.hasOwnProperty(name)) {
+	                        pendents += 1;
+	                        load(name);
+	                    }
+	                }
 	            });
-	        }
-	    };
+	        };
+
+	    /**
+	     * A load interface that can receive a string or a Object
+	     * and wrapp the request for a loadSingle or a loadMultiple template
+	     * @param   {(Object|string)} map - The template URI
+	     * @param   {function} [callback] - Optiona, can be used in 'then' callback of the promisse
+	     * @returns {Object} - Promise with the template
+	     */
 	    this.load = function (map, callback) {
-	        var promisse;
+	        var promise;
 	        if (typeof map === 'string') {
-	            promisse = loadOne(map);
+	            promise = loadOne(map);
 	        } else {
-	            promisse = loadMultiple(map);
+	            promise = loadMultiple(map);
 	        }
-	        if (typeof callback === 'undefined')
-	            return promisse;
-	        else {
-	            promisse.then(callback);
+	        if (typeof callback === 'undefined') {
+	            return promise;
+	        } else {
+	            promise.then(callback);
 	        }
 	    };
+
+	    /**
+	     * Wrapper load that already makes the new object
+	     * @param {Object}   options  - New instance options
+	     * @param {function} [callback] - callback tha will be receiver the compiled object
+	     */
 	    this.compile = function (options, callback) {
-	        this.load(options.template).then(function (Component) {
-	            delete options.template;
+	        this.load(options.url).then(function (Component) {
 	            var component = new Component(options);
 
 	            if (typeof callback === 'function') {
@@ -585,25 +691,55 @@
 	            }
 	        });
 	    };
-	    this.registerPartial = function (name) {
-	        $.get(formatPartialUrl(name), function (response) {
-	            Ractive.partials[name] = response;
+
+	    /**
+	     * Create a default Ractive object using the main element and the template
+	     * @param   {string} template
+	     * @returns {Object}
+	     */
+	    this.createRactive = function (template) {
+	        return Ractive.extend({
+	            el: mainElement,
+	            template: template
+	        });
+	    };
+
+	    this.registerPartial = function (path) {
+	        ajax.run({
+	            url: templates.formatPartialUrl(path),
+	            contentType: "text/html",
+	            dataType: "html",
+	            cache: ajaxCache,
+	            success: function (response) {
+	                Ractive.partials[path] = response;
+	            }
 	        });
 	    };
 	    this.registerHelper = function (name, func) {
 	        Ractive.defaults.data[name] = func;
 	    };
+
+	    this.formatTemplateUrl = function (name) {
+	        return templatePath + name + templateFormat;
+	    };
+	    this.formatPartialUrl = function (name) {
+	        return partialsPath + name + partialsFormat;
+	    };
+
+	    // Main element *etters
+	    this.getMainElement = function () {
+	        return mainElement;
+	    };
+	    this.setMainElement = function (path) {
+	        mainElement = path;
+	    };
+
+	    // Template *etters
 	    this.getTemplatePath = function () {
 	        return templatePath;
 	    };
 	    this.setTemplatePath = function (path) {
 	        templatePath = path;
-	    };
-	    this.getTemplateFormat = function () {
-	        return templateFormat;
-	    };
-	    this.setTemplateFormat = function (path) {
-	        templateFormat = path;
 	    };
 	    this.getPartialsPath = function () {
 	        return partialsPath;
@@ -611,28 +747,253 @@
 	    this.setPartialsPath = function (path) {
 	        partialsPath = path;
 	    };
+
+	    // Partial *etters
 	    this.getPartialsFormat = function () {
 	        return partialsFormat;
 	    };
 	    this.setPartialsFormat = function (path) {
 	        partialsFormat = path;
 	    };
-	    this.getMainElement = function () {
-	        return mainElement;
-	    };
-	    this.setMainElement = function (path) {
-	        mainElement = path;
-	    };
 	};
+
+	/*global module*/
+	module.exports = Templates;
 
 
 /***/ },
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
+	/*global module*/
 	module.exports = function () {
-
+	    'use strict';
 	};
+
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Events class
+	 */
+	var Events = function () {
+	    'use strict';
+	    var events = this,
+	        registered = {
+	            beforeLoad: {},
+	            afterLoad: {}
+	        };
+
+	    /**
+	     * Trigger an event
+	     * @param {string} eventName - Name of event
+	     * @param {*}  event - Params for event Handles
+	     */
+	    this.trigger = function (eventName, event) {
+	        var key;
+	        for (key in registered[eventName]) {
+	            if (registered[eventName].hasOwnProperty(key)) {
+	                registered[eventName][key](event);
+	            }
+	        }
+	    };
+
+	    /**
+	     * Event handle
+	     * @callback eventCallback
+	     * @param {*} event - Params
+	     */
+
+	    /**
+	     * Register an event handle
+	     * @param {string} eventName
+	     * @param {string} handleName
+	     * @param {eventCallback} handle
+	     */
+	    this.on = function (eventName, handleName, handle) {
+	        if (!registered[eventName]) {
+	            registered[eventName] = {};
+	        }
+	        if (typeof handle !== 'function') {
+	            throw 'invalid event handle';
+	        }
+	        registered[eventName][handleName] = handle;
+	    };
+
+
+	    /**
+	     * Unregister an event handle
+	     * @param {string} eventName
+	     * @param {string} handleName
+	     */
+	    this.off = function (eventName, handleName) {
+	        if (!registered[eventName]) {
+	            return;
+	        }
+	        delete registered[eventName][handleName];
+	    };
+	};
+
+	/*global module*/
+	module.exports = Events;
+
+
+/***/ },
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Forms = function ($, NR, Ractive, prompt) {
+	    'use strict';
+	    var forms = this,
+
+	        formWidget = Ractive.extend({
+	            template: '<form id="{{nr-form-id}}" class="nr-form {{class}}" action="{{action}}" method="{{method || "get"}}" on-submit="envia">{{>content}}</form>',
+	            onrender: function () {
+
+	                this.on('envia', function () {
+	                    forms.submit(this);
+	                });
+	            }
+	        });
+
+	    Ractive.components['nr:form'] = formWidget;
+
+	    this.submit = function (comp) {
+	        var question = comp.get('nr-question');
+	        if (question) {
+	            prompt.question(question, function () {
+	                forms.send(comp);
+	            });
+	        } else {
+	            forms.send(comp);
+	        }
+	    };
+	    this.getCompForm = function (comp) {
+	        return $("#" + comp.get('nr-form-id'));
+	    };
+	    this.send = function (comp) {
+	        var callback = comp.get('nr-callback') || false,
+	            redirect = comp.get('nr-redirect') || false,
+	            contentType = comp.get('nr-content-type') || 'application/x-www-form-urlencoded; charset=UTF-8',
+	            data = contentType === 'application/json' ? JSON.stringify(comp.get("nr-data")) : this.getCompForm(comp).serialize();
+
+	        NR.ajax.run({
+	            url: comp.get('action'),
+	            method: comp.get('method') || 'get',
+	            success: function (response) {
+	                if (callback) {
+	                    NR.modules.call(callback, response);
+	                }
+	                if (redirect === true || redirect === 'true') {
+	                    NR.reload(response);
+	                } else if (redirect) {
+	                    NR.load(redirect, response);
+	                }
+	            }
+	        });
+	    };
+	};
+
+	/*global module*/
+	module.exports = Forms;
+
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Intervals = function () {
+	    'use strict';
+	    var registered = {};
+
+	    this.register = function (name, func, time, cleanable) {
+	        if (cleanable === undefined) {
+	            cleanable = true;
+	        }
+
+	        registered[name] = {
+	            interval: setInterval(func, time),
+	            cleanable: cleanable
+	        };
+	    };
+	    this.clear = function (name) {
+	        if (registered[name] !== undefined) {
+	            clearInterval(registered[name].interval);
+	        }
+	    };
+	    this.clearAll = function () {
+	        var key;
+	        for (key in registered) {
+	            if (registered.hasOwnProperty(key) && registered[key].cleanable) {
+	                clearInterval(registered[key].interval);
+	            }
+	        }
+	    };
+	};
+
+	/*global module*/
+	module.exports = Intervals;
+
+
+/***/ },
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Timeouts = function () {
+	    'use strict';
+	    var registered = {};
+
+	    this.register = function (name, func, time, cleanable) {
+	        if (cleanable === undefined) {
+	            cleanable = true;
+	        }
+
+	        registered[name] = {
+	            timeout: setTimeout(func, time),
+	            cleanable: cleanable
+	        };
+	    };
+	    this.clear = function (name) {
+	        if (registered[name] !== undefined) {
+	            clearTimeout(registered[name].timeout);
+	        }
+	    };
+	    this.clearAll = function () {
+	        var key;
+	        for (key in registered) {
+	            if (registered.hasOwnProperty(key) && registered[key].cleanable) {
+	                clearTimeout(registered[key].timeout);
+	            }
+	        }
+	    };
+	};
+
+	/*global module*/
+	module.exports = Timeouts;
+
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Prompt = function () {
+	    'use strict';
+
+	    this.question = function (message, callback) {
+	        /*global confirm*/
+	        var confirmacao = confirm(message);
+	        if (confirmacao) {
+	            callback();
+	        }
+	    };
+	    this.prompt = function (message) {
+	        /*global alert*/
+	        alert(message);
+	    };
+	};
+
 
 /***/ }
 /******/ ]);
