@@ -12,6 +12,10 @@ var Prompt = function () {
         /*global alert*/
         alert(message);
     };
+    this.error = function (message) {
+        /*global alert*/
+        alert(message);
+    };
 };
 
 /*global module*/

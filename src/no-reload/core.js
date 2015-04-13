@@ -5,7 +5,7 @@ var Modules = require('./modules.js');
 var Templates = require('./templates.js');
 var WebSockets = require('./websockets.js');
 var Events = require('./events.js');
-var Forms = require('./forms.js');
+var Forms = require('./forms/forms.js');
 var Intervals = require('./intervals.js');
 var Timeouts = require('./timeouts.js');
 var Prompt = require('./prompt.js');
@@ -161,6 +161,8 @@ var NoReload = function ($, Ractive) {
     };
 
     this.startAnchorNavigation = function () {
+        /*global window*/
+        /*global location*/
         $(window).on('hashchange', function () {
             var name = location.hash.replace(/^#/, '');
             NR.load(name);

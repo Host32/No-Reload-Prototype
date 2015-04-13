@@ -1,3 +1,5 @@
+/*global require*/
+var Validate = require('./validate.js');
 var Forms = function ($, NR, Ractive, prompt) {
     'use strict';
     var forms = this,
@@ -7,12 +9,21 @@ var Forms = function ($, NR, Ractive, prompt) {
             onrender: function () {
 
                 this.on('envia', function () {
-                    forms.submit(this);
+
+                    if (this.get('nr-validate')) {
+                        if (forms.validate.form(forms.getCompForm(this), this.get('nr-show-error-popup'))) {
+                            forms.submit(this);
+                        }
+                    } else {
+                        forms.submit(this);
+                    }
                 });
             }
         });
 
     Ractive.components['nr:form'] = formWidget;
+
+    this.validate = new Validate($, prompt);
 
     this.submit = function (comp) {
         var question = comp.get('nr-question');
