@@ -19,7 +19,10 @@ var Forms = function ($, NR, Ractive, prompt) {
                     }
                 });
             }
-        });
+        }),
+        getBooleanOption = function (text, dft) {
+            return text === undefined ? dft : (text === 'false' ? false : (text === 'true' ? true : text));
+        };
 
     Ractive.components['nr:form'] = formWidget;
 
@@ -40,7 +43,8 @@ var Forms = function ($, NR, Ractive, prompt) {
     };
     this.send = function (comp) {
         var callback = comp.get('nr-callback') || false,
-            redirect = comp.get('nr-redirect') || false,
+            redirect = getBooleanOption(comp.get('nr-redirect'), false),
+            reload = getBooleanOption(comp.get('nr-reload'), true),
             contentType = comp.get('nr-content-type') || 'application/x-www-form-urlencoded; charset=UTF-8',
             data = contentType === 'application/json' ? JSON.stringify(comp.get("nr-data")) : this.getCompForm(comp).serialize();
 
@@ -51,12 +55,18 @@ var Forms = function ($, NR, Ractive, prompt) {
             data: data,
             success: function (response) {
                 if (callback) {
-                    NR.modules.call(callback, response);
+                    NR.modules.call(callback, {
+                        data: response
+                    });
                 }
-                if (redirect === true || redirect === 'true') {
+                if (reload === true) {
                     NR.reload(response);
+                } else if (reload) {
+                    NR.load(reload, response);
+                } else if (redirect === true) {
+                    NR.reload();
                 } else if (redirect) {
-                    NR.load(redirect, response);
+                    NR.load(redirect);
                 }
             }
         });

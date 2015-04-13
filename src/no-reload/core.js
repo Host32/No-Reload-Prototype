@@ -46,6 +46,14 @@ var NoReload = function ($, Ractive) {
             return routeDef.model ? new routeDef.model(data) : data;
         },
 
+        createControllerParams = function (route, data, template) {
+            return {
+                route: route,
+                data: data,
+                template: template
+            };
+        },
+
         /**
          * Takes appropriate action in accordance with the definition of the route
          * @param {Object} routeDef - The route definition
@@ -64,21 +72,14 @@ var NoReload = function ($, Ractive) {
                     template = new Component(formatTemplateOptions(routeDef.template, data));
 
                     if (routeDef.controller) {
-                        NR.call(routeDef.controller, {
-                            data: data,
-                            template: template,
-                            route: routeObj
-                        });
+                        NR.call(routeDef.controller, createControllerParams(routeObj, data, template));
                     }
 
                     NR.events.trigger('afterLoad', params);
 
                 });
             } else if (routeDef.controller) {
-                NR.call(routeDef.controller, {
-                    data: params,
-                    route: routeObj
-                });
+                NR.call(routeDef.controller, createControllerParams(routeObj, params));
                 NR.events.trigger('afterLoad', params);
             }
 
@@ -122,7 +123,7 @@ var NoReload = function ($, Ractive) {
         var opt = $.extend({
             url: options.url,
             success: function (response) {
-                NR.call(options.controller, response);
+                NR.call(options.controller, createControllerParams(options, response));
             }
         }, options);
 

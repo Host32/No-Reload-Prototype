@@ -109,6 +109,14 @@
 	            return routeDef.model ? new routeDef.model(data) : data;
 	        },
 
+	        createControllerParams = function (route, data, template) {
+	            return {
+	                route: route,
+	                data: data,
+	                template: template
+	            };
+	        },
+
 	        /**
 	         * Takes appropriate action in accordance with the definition of the route
 	         * @param {Object} routeDef - The route definition
@@ -127,21 +135,14 @@
 	                    template = new Component(formatTemplateOptions(routeDef.template, data));
 
 	                    if (routeDef.controller) {
-	                        NR.call(routeDef.controller, {
-	                            data: data,
-	                            template: template,
-	                            route: routeObj
-	                        });
+	                        NR.call(routeDef.controller, createControllerParams(routeObj, data, template));
 	                    }
 
 	                    NR.events.trigger('afterLoad', params);
 
 	                });
 	            } else if (routeDef.controller) {
-	                NR.call(routeDef.controller, {
-	                    data: params,
-	                    route: routeObj
-	                });
+	                NR.call(routeDef.controller, createControllerParams(routeObj, params));
 	                NR.events.trigger('afterLoad', params);
 	            }
 
@@ -185,7 +186,7 @@
 	        var opt = $.extend({
 	            url: options.url,
 	            success: function (response) {
-	                NR.call(options.controller, response);
+	                NR.call(options.controller, createControllerParams(options, response));
 	            }
 	        }, options);
 
@@ -891,7 +892,10 @@
 	                    }
 	                });
 	            }
-	        });
+	        }),
+	        getBooleanOption = function (text, dft) {
+	            return text === undefined ? dft : (text === 'false' ? false : (text === 'true' ? true : text));
+	        };
 
 	    Ractive.components['nr:form'] = formWidget;
 
@@ -912,7 +916,8 @@
 	    };
 	    this.send = function (comp) {
 	        var callback = comp.get('nr-callback') || false,
-	            redirect = comp.get('nr-redirect') || false,
+	            redirect = getBooleanOption(comp.get('nr-redirect'), false),
+	            reload = getBooleanOption(comp.get('nr-reload'), true),
 	            contentType = comp.get('nr-content-type') || 'application/x-www-form-urlencoded; charset=UTF-8',
 	            data = contentType === 'application/json' ? JSON.stringify(comp.get("nr-data")) : this.getCompForm(comp).serialize();
 
@@ -923,12 +928,18 @@
 	            data: data,
 	            success: function (response) {
 	                if (callback) {
-	                    NR.modules.call(callback, response);
+	                    NR.modules.call(callback, {
+	                        data: response
+	                    });
 	                }
-	                if (redirect === true || redirect === 'true') {
+	                if (reload === true) {
 	                    NR.reload(response);
+	                } else if (reload) {
+	                    NR.load(reload, response);
+	                } else if (redirect === true) {
+	                    NR.reload();
 	                } else if (redirect) {
-	                    NR.load(redirect, response);
+	                    NR.load(redirect);
 	                }
 	            }
 	        });
@@ -1038,6 +1049,7 @@
 
 	/*global module*/
 	module.exports = Prompt;
+
 
 /***/ },
 /* 12 */
@@ -1238,6 +1250,7 @@
 
 	/*global module*/
 	module.exports = Validate;
+
 
 /***/ }
 /******/ ]);
