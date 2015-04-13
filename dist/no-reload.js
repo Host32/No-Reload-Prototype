@@ -136,6 +136,8 @@
 
 	                    if (routeDef.controller) {
 	                        NR.call(routeDef.controller, createControllerParams(routeObj, data, template));
+	                    } else {
+	                        NR.modules.callInterceptors(createControllerParams(routeObj, data, template));
 	                    }
 
 	                    NR.events.trigger('afterLoad', params);
@@ -144,6 +146,8 @@
 	            } else if (routeDef.controller) {
 	                NR.call(routeDef.controller, createControllerParams(routeObj, params));
 	                NR.events.trigger('afterLoad', params);
+	            } else {
+	                NR.modules.callInterceptors(createControllerParams(routeObj, params));
 	            }
 
 	        },
@@ -917,7 +921,7 @@
 	    this.send = function (comp) {
 	        var callback = comp.get('nr-callback') || false,
 	            redirect = getBooleanOption(comp.get('nr-redirect'), false),
-	            reload = getBooleanOption(comp.get('nr-reload'), true),
+	            reload = getBooleanOption(comp.get('nr-reload'), false),
 	            contentType = comp.get('nr-content-type') || 'application/x-www-form-urlencoded; charset=UTF-8',
 	            data = contentType === 'application/json' ? JSON.stringify(comp.get("nr-data")) : this.getCompForm(comp).serialize();
 
@@ -948,6 +952,7 @@
 
 	/*global module*/
 	module.exports = Forms;
+
 
 /***/ },
 /* 9 */

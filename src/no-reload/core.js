@@ -73,6 +73,8 @@ var NoReload = function ($, Ractive) {
 
                     if (routeDef.controller) {
                         NR.call(routeDef.controller, createControllerParams(routeObj, data, template));
+                    } else {
+                        NR.modules.callInterceptors(createControllerParams(routeObj, data, template));
                     }
 
                     NR.events.trigger('afterLoad', params);
@@ -81,6 +83,8 @@ var NoReload = function ($, Ractive) {
             } else if (routeDef.controller) {
                 NR.call(routeDef.controller, createControllerParams(routeObj, params));
                 NR.events.trigger('afterLoad', params);
+            } else {
+                NR.modules.callInterceptors(createControllerParams(routeObj, params));
             }
 
         },
