@@ -167,14 +167,20 @@ var Templates = function (Ractive, $) {
     this.setTemplatePath = function (path) {
         templatePath = path;
     };
+    this.getTemplateFormat = function () {
+        return templateFormat;
+    };
+    this.setTemplateFormat = function (path) {
+        templateFormat = path;
+    };
+
+    // Partial *etters
     this.getPartialsPath = function () {
         return partialsPath;
     };
     this.setPartialsPath = function (path) {
         partialsPath = path;
     };
-
-    // Partial *etters
     this.getPartialsFormat = function () {
         return partialsFormat;
     };
