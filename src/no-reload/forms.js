@@ -3,7 +3,7 @@ var Forms = function ($, NR, Ractive, prompt) {
     var forms = this,
 
         formWidget = Ractive.extend({
-            template: '<form id="{{nr-form-id}}" class="nr-form {{class}}" action="{{action}}" method="{{method || "get"}}" on-submit="envia">{{>content}}</form>',
+            template: '<form id="{{this["nr-form-id"]}}" class="nr-form {{class}}" action="{{action}}" method="{{method || "get"}}" on-submit="envia">{{>content}}</form>',
             onrender: function () {
 
                 this.on('envia', function () {
@@ -36,6 +36,8 @@ var Forms = function ($, NR, Ractive, prompt) {
         NR.ajax.run({
             url: comp.get('action'),
             method: comp.get('method') || 'get',
+            contentType: contentType,
+            data: data,
             success: function (response) {
                 if (callback) {
                     NR.modules.call(callback, response);

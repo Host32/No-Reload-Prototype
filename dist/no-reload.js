@@ -69,8 +69,8 @@
 	var WebSockets = __webpack_require__(6);
 	var Events = __webpack_require__(7);
 	var Forms = __webpack_require__(8);
-	var Intervals = __webpack_require__(9);
-	var Timeouts = __webpack_require__(10);
+	var Intervals = __webpack_require__(10);
+	var Timeouts = __webpack_require__(9);
 	var Prompt = __webpack_require__(11);
 
 	/**
@@ -785,6 +785,7 @@
 	/*global module*/
 	module.exports = Templates;
 
+
 /***/ },
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
@@ -873,7 +874,7 @@
 	    var forms = this,
 
 	        formWidget = Ractive.extend({
-	            template: '<form id="{{nr-form-id}}" class="nr-form {{class}}" action="{{action}}" method="{{method || "get"}}" on-submit="envia">{{>content}}</form>',
+	            template: '<form id="{{this["nr-form-id"]}}" class="nr-form {{class}}" action="{{action}}" method="{{method || "get"}}" on-submit="envia">{{>content}}</form>',
 	            onrender: function () {
 
 	                this.on('envia', function () {
@@ -906,6 +907,8 @@
 	        NR.ajax.run({
 	            url: comp.get('action'),
 	            method: comp.get('method') || 'get',
+	            contentType: contentType,
+	            data: data,
 	            success: function (response) {
 	                if (callback) {
 	                    NR.modules.call(callback, response);
@@ -923,46 +926,8 @@
 	/*global module*/
 	module.exports = Forms;
 
-
 /***/ },
 /* 9 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Intervals = function () {
-	    'use strict';
-	    var registered = {};
-
-	    this.register = function (name, func, time, cleanable) {
-	        if (cleanable === undefined) {
-	            cleanable = true;
-	        }
-
-	        registered[name] = {
-	            interval: setInterval(func, time),
-	            cleanable: cleanable
-	        };
-	    };
-	    this.clear = function (name) {
-	        if (registered[name] !== undefined) {
-	            clearInterval(registered[name].interval);
-	        }
-	    };
-	    this.clearAll = function () {
-	        var key;
-	        for (key in registered) {
-	            if (registered.hasOwnProperty(key) && registered[key].cleanable) {
-	                clearInterval(registered[key].interval);
-	            }
-	        }
-	    };
-	};
-
-	/*global module*/
-	module.exports = Intervals;
-
-
-/***/ },
-/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Timeouts = function () {
@@ -996,6 +961,43 @@
 
 	/*global module*/
 	module.exports = Timeouts;
+
+
+/***/ },
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Intervals = function () {
+	    'use strict';
+	    var registered = {};
+
+	    this.register = function (name, func, time, cleanable) {
+	        if (cleanable === undefined) {
+	            cleanable = true;
+	        }
+
+	        registered[name] = {
+	            interval: setInterval(func, time),
+	            cleanable: cleanable
+	        };
+	    };
+	    this.clear = function (name) {
+	        if (registered[name] !== undefined) {
+	            clearInterval(registered[name].interval);
+	        }
+	    };
+	    this.clearAll = function () {
+	        var key;
+	        for (key in registered) {
+	            if (registered.hasOwnProperty(key) && registered[key].cleanable) {
+	                clearInterval(registered[key].interval);
+	            }
+	        }
+	    };
+	};
+
+	/*global module*/
+	module.exports = Intervals;
 
 
 /***/ },
