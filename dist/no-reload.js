@@ -44,6 +44,7 @@
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
+	/*global window*/
 	(function () {
 	    'use strict';
 
@@ -54,6 +55,7 @@
 
 	    window.NR = window.NoReload = new NoReload(window.jQuery, window.Ractive);
 	}());
+
 
 /***/ },
 /* 1 */
@@ -266,6 +268,7 @@
 
 	/*global module*/
 	module.exports = NoReload;
+
 
 /***/ },
 /* 2 */
@@ -504,6 +507,7 @@
 	/*global module*/
 	module.exports = Routes;
 
+
 /***/ },
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
@@ -618,8 +622,7 @@
 	            if (deferreds[path] === undefined) {
 	                deferreds[path] = $.ajax({
 	                    url: templates.formatTemplateUrl(path),
-	                    contentType: "text/html",
-	                    dataType: "html",
+	                    dataType: "text",
 	                    cache: ajaxCache,
 	                    success: function (template) {
 	                        cache[path] = templates.createRactive(template);
@@ -724,8 +727,7 @@
 	    this.registerPartial = function (path) {
 	        $.ajax({
 	            url: templates.formatPartialUrl(path),
-	            contentType: "text/html",
-	            dataType: "html",
+	            dataType: "text",
 	            cache: ajaxCache,
 	            success: function (response) {
 	                Ractive.partials[path] = response;
@@ -758,14 +760,20 @@
 	    this.setTemplatePath = function (path) {
 	        templatePath = path;
 	    };
+	    this.getTemplateFormat = function () {
+	        return templateFormat;
+	    };
+	    this.setTemplateFormat = function (path) {
+	        templateFormat = path;
+	    };
+
+	    // Partial *etters
 	    this.getPartialsPath = function () {
 	        return partialsPath;
 	    };
 	    this.setPartialsPath = function (path) {
 	        partialsPath = path;
 	    };
-
-	    // Partial *etters
 	    this.getPartialsFormat = function () {
 	        return partialsFormat;
 	    };
@@ -1004,7 +1012,7 @@
 	            callback();
 	        }
 	    };
-	    this.prompt = function (message) {
+	    this.show = function (message) {
 	        /*global alert*/
 	        alert(message);
 	    };

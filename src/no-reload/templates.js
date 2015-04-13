@@ -27,8 +27,7 @@ var Templates = function (Ractive, $) {
             if (deferreds[path] === undefined) {
                 deferreds[path] = $.ajax({
                     url: templates.formatTemplateUrl(path),
-                    contentType: "text/html",
-                    dataType: "html",
+                    dataType: "text",
                     cache: ajaxCache,
                     success: function (template) {
                         cache[path] = templates.createRactive(template);
@@ -133,8 +132,7 @@ var Templates = function (Ractive, $) {
     this.registerPartial = function (path) {
         $.ajax({
             url: templates.formatPartialUrl(path),
-            contentType: "text/html",
-            dataType: "html",
+            dataType: "text",
             cache: ajaxCache,
             success: function (response) {
                 Ractive.partials[path] = response;
