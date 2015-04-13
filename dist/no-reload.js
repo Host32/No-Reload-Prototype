@@ -106,7 +106,7 @@
 	        },
 
 	        formatData = function (routeDef, data) {
-	            return routeDef.model ? new routeDef.model(data) : data;
+	            return routeDef.dataFilter ? routeDef.dataFilter(data) : data;
 	        },
 
 	        createControllerParams = function (route, data, template) {
@@ -378,7 +378,7 @@
 	            regExp: routeReg.regExp,
 	            keys: routeReg.keys,
 	            type: type,
-	            model: route.model,
+	            dataFilter: route.dataFilter,
 	            template: route.template,
 	            controller: route.controller
 	        };
@@ -512,7 +512,6 @@
 
 	/*global module*/
 	module.exports = Routes;
-
 
 /***/ },
 /* 4 */

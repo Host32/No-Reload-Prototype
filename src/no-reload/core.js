@@ -43,7 +43,7 @@ var NoReload = function ($, Ractive) {
         },
 
         formatData = function (routeDef, data) {
-            return routeDef.model ? new routeDef.model(data) : data;
+            return routeDef.dataFilter ? routeDef.dataFilter(data) : data;
         },
 
         createControllerParams = function (route, data, template) {

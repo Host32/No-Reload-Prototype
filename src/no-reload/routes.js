@@ -36,7 +36,7 @@ var Routes = function () {
             regExp: routeReg.regExp,
             keys: routeReg.keys,
             type: type,
-            model: route.model,
+            dataFilter: route.dataFilter,
             template: route.template,
             controller: route.controller
         };
