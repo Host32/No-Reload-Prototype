@@ -8,7 +8,7 @@ var Prompt = function () {
             callback();
         }
     };
-    this.prompt = function (message) {
+    this.show = function (message) {
         /*global alert*/
         alert(message);
     };
