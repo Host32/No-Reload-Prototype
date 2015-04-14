@@ -1,5 +1,6 @@
 /*global require*/
 var Validate = require('./validate.js');
+var Mask = require('./mask.js');
 var Forms = function ($, NR, Ractive, prompt) {
     'use strict';
     var forms = this,
@@ -7,9 +8,9 @@ var Forms = function ($, NR, Ractive, prompt) {
         formWidget = Ractive.extend({
             template: '<form id="{{this["nr-form-id"]}}" class="nr-form {{class}}" action="{{action}}" method="{{method || "get"}}" on-submit="envia">{{>content}}</form>',
             onrender: function () {
+                forms.mask.form(forms.getCompForm(this));
 
                 this.on('envia', function () {
-
                     if (this.get('nr-validate')) {
                         if (forms.validate.form(forms.getCompForm(this), this.get('nr-show-error-popup'))) {
                             forms.submit(this);
@@ -27,6 +28,7 @@ var Forms = function ($, NR, Ractive, prompt) {
     Ractive.components['nr:form'] = formWidget;
 
     this.validate = new Validate($, prompt);
+    this.mask = new Mask($);
 
     this.submit = function (comp) {
         var question = comp.get('nr-question');

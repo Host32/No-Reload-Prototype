@@ -276,6 +276,7 @@
 	/*global module*/
 	module.exports = NoReload;
 
+
 /***/ },
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
@@ -512,6 +513,7 @@
 
 	/*global module*/
 	module.exports = Routes;
+
 
 /***/ },
 /* 4 */
@@ -876,6 +878,7 @@
 
 	/*global require*/
 	var Validate = __webpack_require__(12);
+	var Mask = __webpack_require__(13);
 	var Forms = function ($, NR, Ractive, prompt) {
 	    'use strict';
 	    var forms = this,
@@ -883,9 +886,9 @@
 	        formWidget = Ractive.extend({
 	            template: '<form id="{{this["nr-form-id"]}}" class="nr-form {{class}}" action="{{action}}" method="{{method || "get"}}" on-submit="envia">{{>content}}</form>',
 	            onrender: function () {
+	                forms.mask.form(forms.getCompForm(this));
 
 	                this.on('envia', function () {
-
 	                    if (this.get('nr-validate')) {
 	                        if (forms.validate.form(forms.getCompForm(this), this.get('nr-show-error-popup'))) {
 	                            forms.submit(this);
@@ -903,6 +906,7 @@
 	    Ractive.components['nr:form'] = formWidget;
 
 	    this.validate = new Validate($, prompt);
+	    this.mask = new Mask($);
 
 	    this.submit = function (comp) {
 	        var question = comp.get('nr-question');
@@ -951,7 +955,6 @@
 
 	/*global module*/
 	module.exports = Forms;
-
 
 /***/ },
 /* 9 */
@@ -1255,6 +1258,56 @@
 	/*global module*/
 	module.exports = Validate;
 
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Mask = function ($) {
+	    'use strict';
+	    var mask = this,
+	        registered = {
+	            uppercase: function (value) {
+	                return typeof value === 'string' ? value.toUpperCase() : value;
+	            },
+	            lowercase: function (value) {
+	                return typeof value === 'string' ? value.toLowerCase() : value;
+	            }
+	        };
+
+	    this.format = function (rule, value) {
+	        return typeof registered[rule] === 'function' ? registered[rule](value) : value;
+	    };
+	    this.register = function (name, func) {
+	        registered[name] = func;
+	    };
+
+	    this.form = function (form) {
+	        $(form).find(':input').each(function () {
+	            mask.field(this);
+	        });
+	    };
+
+	    this.field = function (field) {
+	        $(field).on('keyup', function () {
+	            var value = $(this).val(),
+	                rules = $(this).data('mask'),
+	                rulesSplit = rules.split('|'),
+	                rulesSplitKey;
+
+	            for (rulesSplitKey in rulesSplit) {
+	                if (rulesSplit.hasOwnProperty(rulesSplitKey)) {
+	                    value = mask.format(rulesSplit[rulesSplitKey], value);
+	                }
+	            }
+	            $(this).val(value);
+	        });
+
+	    };
+	};
+
+	/*global module*/
+	module.exports = Mask;
 
 /***/ }
 /******/ ]);
