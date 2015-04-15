@@ -10,7 +10,8 @@ var Forms = function ($, NR, Ractive, prompt) {
             onrender: function () {
                 forms.mask.form(forms.getCompForm(this));
 
-                this.on('envia', function () {
+                this.on('envia', function (event) {
+                    this.set('formNode', event.node);
                     if (this.get('nr-validate')) {
                         if (forms.validate.form(forms.getCompForm(this), this.get('nr-show-error-popup'))) {
                             forms.submit(this);
@@ -41,7 +42,7 @@ var Forms = function ($, NR, Ractive, prompt) {
         }
     };
     this.getCompForm = function (comp) {
-        return $("#" + comp.get('nr-form-id'));
+        return $(comp.get('formNode'));
     };
     this.send = function (comp) {
         var callback = comp.get('nr-callback') || false,
