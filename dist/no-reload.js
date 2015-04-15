@@ -1294,12 +1294,16 @@
 	        $(field).on('keyup', function () {
 	            var value = $(this).val(),
 	                rules = $(this).data('mask'),
-	                rulesSplit = rules.split('|'),
+	                rulesSplit,
 	                rulesSplitKey;
 
-	            for (rulesSplitKey in rulesSplit) {
-	                if (rulesSplit.hasOwnProperty(rulesSplitKey)) {
-	                    value = mask.format(rulesSplit[rulesSplitKey], value);
+	            if (rules) {
+	                rulesSplit = rules.split('|');
+
+	                for (rulesSplitKey in rulesSplit) {
+	                    if (rulesSplit.hasOwnProperty(rulesSplitKey)) {
+	                        value = mask.format(rulesSplit[rulesSplitKey], value);
+	                    }
 	                }
 	            }
 	            $(this).val(value);
@@ -1310,7 +1314,6 @@
 
 	/*global module*/
 	module.exports = Mask;
-
 
 /***/ }
 /******/ ]);
