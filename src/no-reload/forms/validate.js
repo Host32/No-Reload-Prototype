@@ -12,7 +12,7 @@ var Validate = function ($, prompt) {
         EMAILS_EXP = /^((^([\w\-]+(?:\.[\w\-]+)*)@((?:[\w\-]+\.)*\w[\w\-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?))([,]?))+$/,
         IP_EXP = /^[\d]{1,3}(\.([\d]{1,3})){3}$/,
 
-        RULE_PARAM_EXP = /(\[([.]*)\])/,
+        RULE_PARAM_EXP = /\[([\w]*)\]/,
 
         validations = {
             required: function (value) {
