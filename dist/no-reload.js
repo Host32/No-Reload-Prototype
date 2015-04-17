@@ -526,39 +526,39 @@
 	    'use strict';
 	    var modules = this,
 	        registered = {},
-	        interceptors = {},
+	        interceptors = {};
 
-	        /**
-	         * Search by function among the registered modules
-	         * @param   {String}   name - Path of the function
-	         * @returns {function} - A function that can be call the searched function
-	         */
-	        getFunc = function (name) {
-	            return function (params) {
-	                var names = name.split(';'),
-	                    key,
-	                    scope,
-	                    scopeSplit,
-	                    i;
+	    /**
+	     * Search by function among the registered modules
+	     * @param   {String}   name - Path of the function
+	     * @returns {function} - A function that can be call the searched function
+	     */
+	    this.getFunc = function (name) {
+	        return function (params) {
+	            var names = name.split(';'),
+	                key,
+	                scope,
+	                scopeSplit,
+	                i;
 
-	                for (key in names) {
-	                    if (names.hasOwnProperty(key)) {
-	                        scope = registered;
-	                        scopeSplit = names[key].split('.');
-	                        for (i = 0; i < scopeSplit.length - 1; i += 1) {
-	                            scope = scope[scopeSplit[i]];
+	            for (key in names) {
+	                if (names.hasOwnProperty(key)) {
+	                    scope = registered;
+	                    scopeSplit = names[key].split('.');
+	                    for (i = 0; i < scopeSplit.length - 1; i += 1) {
+	                        scope = scope[scopeSplit[i]];
 
-	                            if (scope === undefined) {
-	                                break;
-	                            }
-	                        }
-	                        if (scope !== undefined && scope[scopeSplit[scopeSplit.length - 1]] !== undefined) {
-	                            scope[scopeSplit[scopeSplit.length - 1]](params);
+	                        if (scope === undefined) {
+	                            break;
 	                        }
 	                    }
+	                    if (scope !== undefined && scope[scopeSplit[scopeSplit.length - 1]] !== undefined) {
+	                        return scope[scopeSplit[scopeSplit.length - 1]](params);
+	                    }
 	                }
-	            };
+	            }
 	        };
+	    };
 
 	    this.register = function (name, Module) {
 	        registered[name] = new Module();
@@ -585,10 +585,10 @@
 	        this.callInterceptors(params);
 
 	        if (typeof moduleFunc === 'string') {
-	            moduleFunc = getFunc(moduleFunc);
+	            moduleFunc = this.getFunc(moduleFunc);
 	        }
 
-	        moduleFunc(params);
+	        return moduleFunc(params);
 	    };
 	};
 
@@ -1314,6 +1314,7 @@
 
 	/*global module*/
 	module.exports = Mask;
+
 
 /***/ }
 /******/ ]);
