@@ -31,13 +31,19 @@ var NoReload = function ($, Ractive) {
             return (typeof templateDef === 'string') ? templateDef : templateDef.url;
         },
 
+        isAutoRenderTemplate = function (templateDef) {
+            return templateDef.autoRender === undefined || templateDef.autoRender;
+        },
+
         formatTemplateOptions = function (templateDef, data) {
             if (typeof templateDef === 'string') {
                 return {
                     data: data
                 };
             } else {
-                templateDef.data = data;
+                if (isAutoRenderTemplate(templateDef)) {
+                    templateDef.data = data;
+                }
                 return templateDef;
             }
         },
@@ -66,10 +72,16 @@ var NoReload = function ($, Ractive) {
 
             if (routeDef.template) {
                 NR.templates.load(getTemplateUrl(routeDef.template)).then(function (Component) {
-                    var data, template;
+                    var data, template, templateOpt;
 
                     data = formatData(routeDef, params);
-                    template = new Component(formatTemplateOptions(routeDef.template, data));
+                    templateOpt = formatTemplateOptions(routeDef.template, data);
+
+                    if (isAutoRenderTemplate(routeDef.template)) {
+                        template = new Component(templateOpt);
+                    } else {
+                        template = Component.extend(templateOpt);
+                    }
 
                     if (routeDef.controller) {
                         NR.call(routeDef.controller, createControllerParams(routeObj, data, template));
