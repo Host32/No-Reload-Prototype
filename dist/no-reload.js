@@ -292,6 +292,7 @@
 	/*global module*/
 	module.exports = NoReload;
 
+
 /***/ },
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
@@ -946,7 +947,7 @@
 
 	        NR.ajax.run({
 	            url: comp.get('action'),
-	            method: comp.get('method') || 'get',
+	            type: comp.get('method') || 'get',
 	            contentType: contentType,
 	            data: data,
 	            success: function (response) {
@@ -971,7 +972,6 @@
 
 	/*global module*/
 	module.exports = Forms;
-
 
 /***/ },
 /* 9 */

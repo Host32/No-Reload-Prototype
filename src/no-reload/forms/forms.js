@@ -53,7 +53,7 @@ var Forms = function ($, NR, Ractive, prompt) {
 
         NR.ajax.run({
             url: comp.get('action'),
-            method: comp.get('method') || 'get',
+            type: comp.get('method') || 'get',
             contentType: contentType,
             data: data,
             success: function (response) {
