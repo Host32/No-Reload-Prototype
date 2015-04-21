@@ -85,6 +85,7 @@
 	        defaultRoute = '',
 	        lastRoute = null,
 	        route404 = null,
+	        autoRenderTemplate = true,
 
 	        isAjax = function (routeObj, params) {
 	            return routeObj.definition.type === 'ajax' && params === undefined;
@@ -95,7 +96,7 @@
 	        },
 
 	        isAutoRenderTemplate = function (templateDef) {
-	            return templateDef.autoRender === undefined || templateDef.autoRender;
+	            return (templateDef.autoRender === undefined && autoRenderTemplate) || templateDef.autoRender;
 	        },
 
 	        formatTemplateOptions = function (templateDef, data) {
@@ -282,6 +283,9 @@
 	    };
 	    this.setRoute404 = function (routeName) {
 	        route404 = routeName;
+	    };
+	    this.setAutoRenderTemplate = function (autoRender) {
+	        autoRenderTemplate = autoRender;
 	    };
 	};
 

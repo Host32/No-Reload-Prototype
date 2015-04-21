@@ -22,6 +22,7 @@ var NoReload = function ($, Ractive) {
         defaultRoute = '',
         lastRoute = null,
         route404 = null,
+        autoRenderTemplate = true,
 
         isAjax = function (routeObj, params) {
             return routeObj.definition.type === 'ajax' && params === undefined;
@@ -32,7 +33,7 @@ var NoReload = function ($, Ractive) {
         },
 
         isAutoRenderTemplate = function (templateDef) {
-            return templateDef.autoRender === undefined || templateDef.autoRender;
+            return (templateDef.autoRender === undefined && autoRenderTemplate) || templateDef.autoRender;
         },
 
         formatTemplateOptions = function (templateDef, data) {
@@ -219,6 +220,9 @@ var NoReload = function ($, Ractive) {
     };
     this.setRoute404 = function (routeName) {
         route404 = routeName;
+    };
+    this.setAutoRenderTemplate = function (autoRender) {
+        autoRenderTemplate = autoRender;
     };
 };
 
