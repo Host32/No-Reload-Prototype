@@ -22,7 +22,7 @@ var NoReload = function ($, Ractive) {
         defaultRoute = '',
         lastRoute = null,
         route404 = null,
-        autoRenderTemplate = true,
+        autoRenderTemplate = false,
 
         isAjax = function (routeObj, params) {
             return routeObj.definition.type === 'ajax' && params === undefined;
