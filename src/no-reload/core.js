@@ -39,16 +39,19 @@ var NoReload = function ($, Ractive) {
         formatTemplateOptions = function (templateDef, data) {
             if (typeof templateDef === 'string') {
                 return {
-                    data: data
+                    data: function () {
+                        return data;
+                    }
                 };
             } else {
                 if (isAutoRenderTemplate(templateDef)) {
-                    templateDef.data = data;
+                    templateDef.data = function () {
+                        return data;
+                    };
                 }
                 return templateDef;
             }
         },
-
         formatData = function (routeDef, data) {
             return routeDef.dataFilter ? routeDef.dataFilter(data) : data;
         },
