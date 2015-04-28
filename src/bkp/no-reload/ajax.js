@@ -3,18 +3,9 @@
  * @param {Object} NR - NoReload
  * @param {Object} $ - jQuery
  */
-var Ajax = function ($) {
+var Ajax = function (NR, $) {
     'use strict';
-    var ajax = this,
-        serverAddress = '';
-
-    this.getServerAddress = function () {
-        return serverAddress;
-    };
-
-    this.setServerAddress = function (address) {
-        serverAddress = address;
-    };
+    var ajax = this;
 
     /**
      * Default parameteres
@@ -37,7 +28,7 @@ var Ajax = function ($) {
      * @returns {string} Complete URL from server
      */
     this.prepareUrl = function (location) {
-        return serverAddress + location;
+        return NR.getServerAddress() + location;
     };
 
     this.error = function () {

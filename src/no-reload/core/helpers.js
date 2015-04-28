@@ -1,39 +1,70 @@
-/*jslint node: true */
-'use strict';
-
 /*global module*/
-module.exports = {
-    toInt: function (str) {
+(function ($) {
+    'use strict';
+
+    function toInt(str) {
         return parseInt(str, 10);
-    },
+    }
 
-    isString: function (value) {
+    function isString(value) {
         return typeof value === 'string';
-    },
+    }
 
-    isNumber: function (value) {
+    function isNumber(value) {
         return typeof value === 'number';
-    },
+    }
 
-    isDefined: function (value) {
+    function isDefined(value) {
         return typeof value !== 'undefined';
-    },
+    }
 
-    isUndefined: function (value) {
+    function isUndefined(value) {
         return typeof value === 'undefined';
-    },
+    }
 
-    isObject: function (value) {
+    function isObject(value) {
         return value !== null && typeof value === 'object';
-    },
+    }
 
-    isFunction: function (value) {
+    function isWindow(obj) {
+        return obj && obj.window === obj;
+    }
+
+    function isNull(value) {
+        return value === null;
+    }
+
+    function isNonNull(value) {
+        return value !== null;
+    }
+
+    function isFunction(value) {
         return typeof value === 'function';
-    },
+    }
 
-    isBoolean: function (value) {
+    function isBoolean(value) {
         return typeof value === 'boolean';
-    },
+    }
 
-    isArray: Array.isArray
-};
+    function isArray(value) {
+        return Array.isArray(value);
+    }
+
+    function extend() {
+        return $.extend.apply($, arguments);
+    }
+
+    module.exports = {
+        toInt: toInt,
+        isString: isString,
+        isNumber: isNumber,
+        isDefined: isDefined,
+        isUndefined: isUndefined,
+        isObject: isObject,
+        isFunction: isFunction,
+        isBoolean: isBoolean,
+        isArray: isArray,
+        extend: extend
+    };
+
+}(window.jQuery));
