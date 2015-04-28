@@ -1,5 +1,5 @@
 /*global module, require*/
-(function (injetor, helpers) {
+(function () {
     'use strict';
 
     var Ajax = require('./ajax.js'),
@@ -234,64 +234,5 @@
             };
         };
 
-    NoReload.prototype.helpers = helpers;
-    NoReload.prototype.injetor = injetor;
-
-    NoReload.prototype.state = function (name, def) {
-        this.states[name] = def;
-    };
-
-    NoReload.prototype.controller = function (name, construtor) {
-        this.controllers[name] = construtor;
-    };
-
-    NoReload.prototype.resolveController = function (name, scope) {
-        if (this.helpers.isFunction(name)) {
-            return function () {
-                name.apply(scope);
-            };
-        } else if (!this.controllers[name]) {
-            return function () {};
-        }
-        return this.injetor.resolve(this.controllers[name], scope);
-    };
-
-    NoReload.prototype.factory = function (name, factory) {
-        if (this.helpers.isFunction(factory) || this.helpers.isArray(factory)) {
-            factory = this.injetor.resolve(factory);
-            this.injetor.register(name, factory());
-        } else {
-            this.injetor.register(name, factory);
-        }
-    };
-
-    NoReload.prototype.config = function (config) {
-        this.configs.push(config);
-    };
-
-    NoReload.prototype.run = function (autoRun) {
-        this.autoRun.push(autoRun);
-    };
-
-    NoReload.prototype.startConfig = function () {
-        var i;
-        for (i = 0; i < this.configs.length; i += 1) {
-            this.injetor.resolve(this.configs[i])();
-        }
-    };
-
-    NoReload.prototype.run = function () {
-        var i;
-        for (i = 0; i < this.configs.length; i += 1) {
-            this.injetor.resolve(this.configs[i])();
-        }
-    };
-
-    NoReload.prototype.start = function () {
-        this.startConfig();
-
-        this.run();
-    };
-
     module.exports = NoReload;
-}(require('./core/injetor.js'), require('./core/helpers.js')));
+}());
