@@ -1,0 +1,8 @@
+{
+    "ok": true,
+    "foo": {
+        "bar": "funcionou"
+    },
+    "message": "ok",
+    "id": "original"
+}
