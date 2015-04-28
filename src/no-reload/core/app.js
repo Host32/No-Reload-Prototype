@@ -26,8 +26,7 @@
 
         function registerService(name, factory) {
             if (helpers.isFunction(factory) || helpers.isArray(factory)) {
-                factory = injector.resolve(factory);
-                injector.register(name, factory());
+                injector.register(name, injector.resolve(factory));
             } else {
                 injector.register(name, factory);
             }
@@ -66,13 +65,6 @@
             startupMethods.push(method);
 
             return appInstance;
-        }
-
-        function startup() {
-            var i;
-            for (i = 0; i < startupMethods.length; i += 1) {
-                injector.resolve(startupMethods[i])();
-            }
         }
 
         function runState(state, myTemplate, serverResponse) {
@@ -115,8 +107,9 @@
             } else {
                 completeRequest = true;
             }
-            template.extractParams(states).then(function (options) {
-                myTemplate = new template.create(options);
+            template.extractParams(state).then(function (options) {
+                var Template = template.create(options);
+                myTemplate = new Template();
 
                 completeTemplate = true;
                 if (completeRequest) {
@@ -142,7 +135,7 @@
 
             for (i = 0; i < subStates.length; i += 1) {
                 if (subStates[i] !== currentStateTree[i]) {
-                    resolveState(states[subStates[i]], params);
+                    resolveState(subStates[i], params);
                 }
             }
             currentStateTree = subStates;
@@ -191,6 +184,13 @@
             }
         }
 
+        function startup() {
+            var i;
+            for (i = 0; i < startupMethods.length; i += 1) {
+                injector.resolve(startupMethods[i])();
+            }
+        }
+
         function startAnchorNavigation() {
             startup();
 
@@ -218,6 +218,7 @@
             getController: resolveController,
             resolve: injector.resolve,
             start: start,
+            startAnchorNavigation: startAnchorNavigation,
             go: goToState,
             goToUrl: goToUrl
         };

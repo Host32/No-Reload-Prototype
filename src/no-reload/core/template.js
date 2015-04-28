@@ -121,7 +121,10 @@
         var options = helpers.extend({}, state);
 
         options.template = template;
-        options.el = undefined;
+        delete options.el;
+        delete options.controller;
+        delete options.serverLink;
+        delete options.templateUrl;
 
         return options;
     }

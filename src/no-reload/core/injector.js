@@ -29,23 +29,27 @@
 
         if (helpers.isFunction(definition)) {
             func = definition;
-            deps = func.toString().match(/^[function\s]*[\(]*\(\s*([\w,\s]*)\)/m)[1].replace(/ /g, '').split(',');
+            deps = func.toString().match(/^[function\s]*[\(]*\(\s*([\w,$@\s]*)\)/m)[1].replace(/ /g, '').split(',');
         } else if (helpers.isArray(definition)) {
             func = definition[definition.length - 1];
             deps = definition.splice(-1, 1);
         }
         return function () {
-            var i, d;
+            var i, d, value;
             for (i = 0; i < deps.length; i += 1) {
                 d = deps[i];
                 if (self.dependencies[d] && d !== '') {
-                    args.push(self.dependencies[d]);
+                    value = self.dependencies[d];
+                    if (helpers.isFunction(value)) {
+                        value = value();
+                    }
+                    args.push(value);
                 }
                 if (self.flashDependencies[d] && d !== '') {
                     args.push(self.flashDependencies[d]);
                 }
             }
-            func.apply(scope || {}, args);
+            return func.apply(scope || {}, args);
         };
     };
 

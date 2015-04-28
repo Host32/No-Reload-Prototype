@@ -8,7 +8,7 @@
         apps = {};
 
 
-    function get(name) {
+    function app(name) {
         if (!apps[name]) {
             apps[name] = appProvider.create();
         }
@@ -16,6 +16,6 @@
     }
 
     module.exports = helpers.extend({
-        app: get
+        app: app
     }, helpers);
 }());
