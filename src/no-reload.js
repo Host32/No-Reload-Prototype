@@ -1,11 +1,10 @@
-/*global window*/
-(function () {
+/*global window, require*/
+(function ($, Ractive) {
     'use strict';
 
-    window.Ractive.DEBUG = false;
+    var NR = require('./no-reload/no-reload'),
+        Retro = require('./retro/core'),
+        retro = new Retro($, Ractive);
 
-    /*global require*/
-    var NoReload = require('./no-reload/core.js');
-
-    window.NR = window.NoReload = new NoReload(window.jQuery, window.Ractive);
-}());
+    window.NR = window.NoReload = NR.extend(NR, retro);
+}(window.jQuery, window.Ractive));

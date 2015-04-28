@@ -44,256 +44,603 @@
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/*global window*/
-	(function () {
+	/*global window, require*/
+	(function ($, Ractive) {
 	    'use strict';
 
-	    window.Ractive.DEBUG = false;
+	    var NR = __webpack_require__(1),
+	        Retro = __webpack_require__(2),
+	        retro = new Retro($, Ractive);
 
-	    /*global require*/
-	    var NoReload = __webpack_require__(1);
-
-	    window.NR = window.NoReload = new NoReload(window.jQuery, window.Ractive);
-	}());
-
+	    window.NR = window.NoReload = NR.extend(NR, retro);
+	}(window.jQuery, window.Ractive));
 
 /***/ },
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/*global require*/
-	var Ajax = __webpack_require__(2);
-	var Routes = __webpack_require__(3);
-	var Modules = __webpack_require__(4);
-	var Templates = __webpack_require__(5);
-	var WebSockets = __webpack_require__(6);
-	var Events = __webpack_require__(7);
-	var Forms = __webpack_require__(8);
-	var Intervals = __webpack_require__(9);
-	var Timeouts = __webpack_require__(10);
-	var Prompt = __webpack_require__(11);
-
-	/**
-	 * NoReload core class
-	 * @param {object} $        jQuery
-	 * @param {object} Ractive  Ractive
-	 */
-	var NoReload = function ($, Ractive) {
+	/*global module, require*/
+	(function () {
 	    'use strict';
-	    var NR = this,
-	        serverAddress = '',
-	        defaultRoute = '',
-	        lastRoute = null,
-	        route404 = null,
-	        autoRenderTemplate = false,
 
-	        isAjax = function (routeObj, params) {
-	            return routeObj.definition.type === 'ajax' && params === undefined;
-	        },
+	    var appProvider = __webpack_require__(3),
+	        helpers = __webpack_require__(4),
 
-	        getTemplateUrl = function (templateDef) {
-	            return (typeof templateDef === 'string') ? templateDef : templateDef.url;
-	        },
+	        apps = {};
 
-	        isAutoRenderTemplate = function (templateDef) {
-	            return (templateDef.autoRender === undefined && autoRenderTemplate) || templateDef.autoRender;
-	        },
 
-	        formatTemplateOptions = function (templateDef, data) {
-	            if (typeof templateDef === 'string') {
-	                return {
-	                    data: data
-	                };
-	            } else {
-	                if (isAutoRenderTemplate(templateDef)) {
-	                    templateDef.data = data;
-	                }
-	                return templateDef;
-	            }
-	        },
-
-	        formatData = function (routeDef, data) {
-	            return routeDef.dataFilter ? routeDef.dataFilter(data) : data;
-	        },
-
-	        createControllerParams = function (route, data, template) {
-	            return {
-	                route: route,
-	                data: data,
-	                template: template
-	            };
-	        },
-
-	        /**
-	         * Takes appropriate action in accordance with the definition of the route
-	         * @param {Object} routeDef - The route definition
-	         * @param {Object} params
-	         */
-	        processRouteParams = function (routeObj, params) {
-	            var routeDef = routeObj.definition;
-
-	            NR.events.trigger('beforeLoad', params);
-
-	            if (routeDef.template) {
-	                NR.templates.load(getTemplateUrl(routeDef.template)).then(function (Component) {
-	                    var data, template, templateOpt;
-
-	                    data = formatData(routeDef, params);
-	                    templateOpt = formatTemplateOptions(routeDef.template, data);
-
-	                    if (isAutoRenderTemplate(routeDef.template)) {
-	                        template = new Component(templateOpt);
-	                    } else {
-	                        template = Component.extend(templateOpt);
-	                    }
-
-	                    if (routeDef.controller) {
-	                        NR.call(routeDef.controller, createControllerParams(routeObj, data, template));
-	                    } else {
-	                        NR.modules.callInterceptors(createControllerParams(routeObj, data, template));
-	                    }
-
-	                    NR.events.trigger('afterLoad', params);
-
-	                });
-	            } else if (routeDef.controller) {
-	                NR.call(routeDef.controller, createControllerParams(routeObj, params));
-	                NR.events.trigger('afterLoad', params);
-	            } else {
-	                NR.modules.callInterceptors(createControllerParams(routeObj, params));
-	            }
-
-	        },
-
-	        /**
-	         * Routes the framework according to the type of the route
-	         * @param {Object}   routeObj - The route Object
-	         * @param {*} params
-	         */
-	        doRoute = function (routeObj, params) {
-	            if (isAjax(routeObj, params)) {
-	                NR.ajax.run({
-	                    url: routeObj.path,
-	                    type: 'get',
-	                    success: function (response) {
-	                        processRouteParams(routeObj, response);
-	                    }
-	                });
-	            } else {
-	                processRouteParams(routeObj, params);
-	            }
-	        };
-
-	    this.ajax = new Ajax(this, $);
-	    this.events = new Events();
-	    this.modules = new Modules();
-	    this.routes = new Routes();
-	    this.templates = new Templates(Ractive, $);
-	    this.ws = new WebSockets();
-	    this.prompt = new Prompt();
-	    this.form = new Forms($, this, Ractive, this.prompt);
-	    this.intervals = new Intervals();
-	    this.timeouts = new Timeouts();
-
-	    /**
-	     * Perform an ajax call to start the system
-	     * @param {Object} options - Ajax.run params
-	     */
-	    this.start = function (options) {
-	        var opt = $.extend({
-	            url: options.url,
-	            success: function (response) {
-	                NR.call(options.controller, createControllerParams(options, response));
-	            }
-	        }, options);
-
-	        this.ajax.run(opt);
-	    };
-
-	    /**
-	     * Changes the system state making call to a route
-	     * @param {string} [route=defaultRoute] - The name of the route
-	     * @param {*} params - Optional params for the route,
-	     *                            if a param is passed the rout is called of static form
-	     */
-	    this.load = function (route, params) {
-	        route = route || defaultRoute;
-
-	        var routeObj = this.routes.find(route);
-	        if (routeObj) {
-	            doRoute(routeObj, params);
-	        } else if (route404) {
-	            routeObj = this.routes.find(route404);
-	            if (routeObj) {
-	                doRoute(routeObj, params);
-	            }
-	        } else {
-	            throw "the route '" + route + "' has not yet been registered";
+	    function app(name) {
+	        if (!apps[name]) {
+	            apps[name] = appProvider.create();
 	        }
-	        lastRoute = route;
-	    };
+	        return apps[name];
+	    }
 
-	    this.reload = function (params) {
-	        this.load(lastRoute, params);
-	    };
+	    module.exports = helpers.extend({
+	        app: app
+	    }, helpers);
+	}());
 
-	    this.call = function (controller, params) {
-	        this.modules.call(controller, params);
-	    };
-
-	    this.startAnchorNavigation = function () {
-	        /*global window*/
-	        /*global location*/
-	        $(window).on('hashchange', function () {
-	            var name = location.hash.replace(/^#/, '');
-	            NR.load(name);
-	        });
-	    };
-
-	    this.registerBeforeLoadEvent = function (name, event) {
-	        this.events.on('beforeLoad', name, event);
-	    };
-	    this.unregisterBeforeLoadEvent = function (name) {
-	        this.events.off('beforeLoad', name);
-	    };
-	    this.registerAfterLoadEvent = function (name, event) {
-	        this.events.on('afterLoad', name, event);
-	    };
-	    this.unregisterAfterLoadEvent = function (name) {
-	        this.events.off('afterLoad', name);
-	    };
-
-	    this.getServerAddress = function () {
-	        return serverAddress;
-	    };
-	    this.setServerAddress = function (address) {
-	        serverAddress = address;
-	    };
-	    this.getCurrentRoute = function () {
-	        return lastRoute;
-	    };
-	    this.getDefaultRoute = function () {
-	        return defaultRoute;
-	    };
-	    this.setDefaultRoute = function (route) {
-	        defaultRoute = route;
-	    };
-	    this.getRoute404 = function () {
-	        return route404;
-	    };
-	    this.setRoute404 = function (routeName) {
-	        route404 = routeName;
-	    };
-	    this.setAutoRenderTemplate = function (autoRender) {
-	        autoRenderTemplate = autoRender;
-	    };
-	};
-
-	/*global module*/
-	module.exports = NoReload;
 
 /***/ },
 /* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function () {
+	    'use strict';
+
+	    var Ajax = __webpack_require__(5),
+	        Routes = __webpack_require__(6),
+	        Modules = __webpack_require__(7),
+	        Templates = __webpack_require__(8),
+	        WebSockets = __webpack_require__(9),
+	        Events = __webpack_require__(10),
+	        Forms = __webpack_require__(11),
+	        Intervals = __webpack_require__(12),
+	        Timeouts = __webpack_require__(13),
+	        Prompt = __webpack_require__(14),
+
+	        /**
+	         * NoReload core class
+	         * @param {object} $        jQuery
+	         * @param {object} Ractive  Ractive
+	         */
+	        NoReload = function ($, Ractive) {
+	            var NR = this,
+	                serverAddress = '',
+	                defaultRoute = '',
+	                lastRoute = null,
+	                route404 = null,
+	                autoRenderTemplate = false,
+
+	                isAjax = function (routeObj, params) {
+	                    return routeObj.definition.type === 'ajax' && params === undefined;
+	                },
+
+	                getTemplateUrl = function (templateDef) {
+	                    return (typeof templateDef === 'string') ? templateDef : templateDef.url;
+	                },
+
+	                isAutoRenderTemplate = function (templateDef) {
+	                    return (templateDef.autoRender === undefined && autoRenderTemplate) || templateDef.autoRender;
+	                },
+
+	                formatTemplateOptions = function (templateDef, data) {
+	                    if (typeof templateDef === 'string') {
+	                        return {
+	                            data: data
+	                        };
+	                    } else {
+	                        if (isAutoRenderTemplate(templateDef)) {
+	                            templateDef.data = data;
+	                        }
+	                        return templateDef;
+	                    }
+	                },
+
+	                formatData = function (routeDef, data) {
+	                    return routeDef.dataFilter ? routeDef.dataFilter(data) : data;
+	                },
+
+	                createControllerParams = function (route, data, template) {
+	                    return {
+	                        route: route,
+	                        data: data,
+	                        template: template
+	                    };
+	                },
+
+	                /**
+	                 * Takes appropriate action in accordance with the definition of the route
+	                 * @param {Object} routeDef - The route definition
+	                 * @param {Object} params
+	                 */
+	                processRouteParams = function (routeObj, params) {
+	                    var routeDef = routeObj.definition;
+
+	                    NR.events.trigger('beforeLoad', params);
+
+	                    if (routeDef.template) {
+	                        NR.templates.load(getTemplateUrl(routeDef.template)).then(function (Component) {
+	                            var data, template, templateOpt;
+
+	                            data = formatData(routeDef, params);
+	                            templateOpt = formatTemplateOptions(routeDef.template, data);
+
+	                            if (isAutoRenderTemplate(routeDef.template)) {
+	                                template = new Component(templateOpt);
+	                            } else {
+	                                template = Component.extend(templateOpt);
+	                            }
+
+	                            if (routeDef.controller) {
+	                                NR.call(routeDef.controller, createControllerParams(routeObj, data, template));
+	                            } else {
+	                                NR.modules.callInterceptors(createControllerParams(routeObj, data, template));
+	                            }
+
+	                            NR.events.trigger('afterLoad', params);
+
+	                        });
+	                    } else if (routeDef.controller) {
+	                        NR.call(routeDef.controller, createControllerParams(routeObj, params));
+	                        NR.events.trigger('afterLoad', params);
+	                    } else {
+	                        NR.modules.callInterceptors(createControllerParams(routeObj, params));
+	                    }
+
+	                },
+
+	                /**
+	                 * Routes the framework according to the type of the route
+	                 * @param {Object}   routeObj - The route Object
+	                 * @param {*} params
+	                 */
+	                doRoute = function (routeObj, params) {
+	                    if (isAjax(routeObj, params)) {
+	                        NR.ajax.run({
+	                            url: routeObj.path,
+	                            type: 'get',
+	                            success: function (response) {
+	                                processRouteParams(routeObj, response);
+	                            }
+	                        });
+	                    } else {
+	                        processRouteParams(routeObj, params);
+	                    }
+	                };
+
+	            this.ajax = new Ajax(this, $);
+	            this.events = new Events();
+	            this.modules = new Modules();
+	            this.routes = new Routes();
+	            this.templates = new Templates(Ractive, $);
+	            this.ws = new WebSockets();
+	            this.prompt = new Prompt();
+	            this.form = new Forms($, this, Ractive, this.prompt);
+	            this.intervals = new Intervals();
+	            this.timeouts = new Timeouts();
+
+
+	            this.controllers = {};
+	            this.states = {};
+	            this.configs = [];
+	            this.autoRun = [];
+
+	            /**
+	             * Perform an ajax call to start the system
+	             * @param {Object} options - Ajax.run params
+	             */
+	            this.start = function (options) {
+	                var opt = $.extend({
+	                    url: options.url,
+	                    success: function (response) {
+	                        NR.call(options.controller, createControllerParams(options, response));
+	                    }
+	                }, options);
+
+	                this.ajax.run(opt);
+	            };
+
+	            /**
+	             * Changes the system state making call to a route
+	             * @param {string} [route=defaultRoute] - The name of the route
+	             * @param {*} params - Optional params for the route,
+	             *                            if a param is passed the rout is called of static form
+	             */
+	            this.load = function (route, params) {
+	                route = route || defaultRoute;
+
+	                var routeObj = this.routes.find(route);
+	                if (routeObj) {
+	                    doRoute(routeObj, params);
+	                } else if (route404) {
+	                    routeObj = this.routes.find(route404);
+	                    if (routeObj) {
+	                        doRoute(routeObj, params);
+	                    }
+	                } else {
+	                    throw "the route '" + route + "' has not yet been registered";
+	                }
+	                lastRoute = route;
+	            };
+
+	            this.reload = function (params) {
+	                this.load(lastRoute, params);
+	            };
+
+	            this.call = function (controller, params) {
+	                this.modules.call(controller, params);
+	            };
+
+	            this.startAnchorNavigation = function () {
+	                /*global window*/
+	                /*global location*/
+	                $(window).on('hashchange', function () {
+	                    var name = location.hash.replace(/^#/, '');
+	                    NR.load(name);
+	                });
+	            };
+
+	            this.registerBeforeLoadEvent = function (name, event) {
+	                this.events.on('beforeLoad', name, event);
+	            };
+	            this.unregisterBeforeLoadEvent = function (name) {
+	                this.events.off('beforeLoad', name);
+	            };
+	            this.registerAfterLoadEvent = function (name, event) {
+	                this.events.on('afterLoad', name, event);
+	            };
+	            this.unregisterAfterLoadEvent = function (name) {
+	                this.events.off('afterLoad', name);
+	            };
+
+	            this.getServerAddress = function () {
+	                return serverAddress;
+	            };
+	            this.setServerAddress = function (address) {
+	                serverAddress = address;
+	            };
+	            this.getCurrentRoute = function () {
+	                return lastRoute;
+	            };
+	            this.getDefaultRoute = function () {
+	                return defaultRoute;
+	            };
+	            this.setDefaultRoute = function (route) {
+	                defaultRoute = route;
+	            };
+	            this.getRoute404 = function () {
+	                return route404;
+	            };
+	            this.setRoute404 = function (routeName) {
+	                route404 = routeName;
+	            };
+	            this.setAutoRenderTemplate = function (autoRender) {
+	                autoRenderTemplate = autoRender;
+	            };
+	        };
+
+	    module.exports = NoReload;
+	}());
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function ($) {
+	    'use strict';
+	    var helpers = __webpack_require__(4),
+	        router = __webpack_require__(15),
+	        template = __webpack_require__(16),
+
+	        Injector = __webpack_require__(17),
+	        Ajax = __webpack_require__(18);
+
+	    function create() {
+	        var injector = new Injector(),
+	            ajax = new Ajax(),
+
+	            currentStateTree = [],
+
+	            states = {},
+	            controllers = {},
+
+	            startupMethods = [],
+
+	            appInstance;
+
+	        injector.register('$template', template);
+	        injector.register('$ajax', ajax);
+
+	        function registerService(name, factory) {
+	            if (helpers.isFunction(factory) || helpers.isArray(factory)) {
+	                injector.register(name, injector.resolve(factory));
+	            } else {
+	                injector.register(name, factory);
+	            }
+
+	            return appInstance;
+	        }
+
+	        function registerState(name, def) {
+	            if (def.url) {
+	                def.urlReg = router.pathtoRegexp(def.url);
+	            }
+	            states[name] = def;
+
+	            return appInstance;
+	        }
+
+	        function registerController(name, construtor) {
+	            controllers[name] = construtor;
+
+	            return appInstance;
+	        }
+
+	        function resolveController(name, scope) {
+	            if (helpers.isFunction(name)) {
+	                return function () {
+	                    name.apply(scope);
+	                };
+	            } else if (!controllers[name]) {
+	                return function () {};
+	            }
+	            return injector.resolve(controllers[name], scope);
+	        }
+
+
+	        function registerStartup(method) {
+	            startupMethods.push(method);
+
+	            return appInstance;
+	        }
+
+	        function runState(state, myTemplate, serverResponse) {
+	            injector.registerFlash('$serverResponse', serverResponse);
+
+	            var controller = resolveController(state.controller, myTemplate);
+
+	            controller();
+
+	            myTemplate.render(state.el);
+
+	            injector.clearFlash();
+	        }
+
+	        function resolveState(name, params) {
+	            if (!states[name]) {
+	                return;
+	            }
+
+	            var state = states[name],
+	                serverLink = state.serverLink,
+	                serverResponse,
+	                myTemplate,
+	                completeRequest = false,
+	                completeTemplate = false;
+
+	            if (serverLink) {
+	                ajax.run({
+	                    url: serverLink,
+	                    type: 'get',
+	                    success: function (response) {
+	                        serverResponse = response;
+
+	                        completeRequest = true;
+	                        if (completeTemplate) {
+	                            runState(state, myTemplate, serverResponse);
+	                        }
+	                    }
+	                });
+	            } else {
+	                completeRequest = true;
+	            }
+	            template.extractParams(state).then(function (options) {
+	                var Template = template.create(options);
+	                myTemplate = new Template();
+
+	                completeTemplate = true;
+	                if (completeRequest) {
+	                    runState(state, myTemplate, serverResponse);
+	                }
+	            });
+	        }
+
+	        function reload(params) {
+	            var i;
+	            for (i = 0; i < currentStateTree.length; i += 1) {
+	                resolveState(states[currentStateTree[i]], params);
+	            }
+	        }
+
+	        function goToState(name, params) {
+	            if (!states[name]) {
+	                return;
+	            }
+
+	            var subStates = name.split('.'),
+	                i;
+
+	            for (i = 0; i < subStates.length; i += 1) {
+	                if (subStates[i] !== currentStateTree[i]) {
+	                    resolveState(subStates[i], params);
+	                }
+	            }
+	            currentStateTree = subStates;
+	        }
+
+	        function extractParams(state, url) {
+	            var urlReg = state.urlReg,
+	                matches = url.match(urlReg.regExp),
+	                matchedObject = {},
+	                matchedKey,
+	                keyIndice,
+	                key;
+
+	            for (keyIndice in urlReg.keys) {
+	                if (urlReg.keys.hasOwnProperty(keyIndice)) {
+	                    key = urlReg.keys[keyIndice];
+	                    matchedKey = parseInt(keyIndice, 10) + 1;
+	                    matchedObject[key.name] = matches[matchedKey];
+	                }
+	            }
+
+	            return matchedObject;
+	        }
+
+	        function resolveUrl(url) {
+	            var key, state;
+
+	            for (key in states) {
+	                if (states.hasOwnProperty(key) && states[key].url) {
+	                    state = states[key];
+	                    if (state.urlReg.regExp.test(url)) {
+	                        return {
+	                            state: state,
+	                            params: extractParams(state, url)
+	                        };
+	                    }
+	                }
+	            }
+	            return null;
+	        }
+
+	        function goToUrl(url) {
+	            var found = resolveUrl(url);
+	            if (found) {
+	                goToState(found.state, found.params);
+	            }
+	        }
+
+	        function startup() {
+	            var i;
+	            for (i = 0; i < startupMethods.length; i += 1) {
+	                injector.resolve(startupMethods[i])();
+	            }
+	        }
+
+	        function startAnchorNavigation() {
+	            startup();
+
+	            /*global window*/
+	            /*global location*/
+	            $(window).on('hashchange', function () {
+	                var name = location.hash.replace(/^#/, '');
+	                goToUrl(name);
+	            });
+
+	            return appInstance;
+	        }
+
+	        function start() {
+	            startup();
+
+	            return appInstance;
+	        }
+
+	        appInstance = {
+	            factory: registerService,
+	            startup: registerStartup,
+	            state: registerState,
+	            controller: registerController,
+	            getController: resolveController,
+	            resolve: injector.resolve,
+	            start: start,
+	            startAnchorNavigation: startAnchorNavigation,
+	            go: goToState,
+	            goToUrl: goToUrl
+	        };
+
+	        return appInstance;
+	    }
+
+	    module.exports = {
+	        create: create
+	    };
+	}(window.jQuery));
+
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module*/
+	(function ($) {
+	    'use strict';
+
+	    function toInt(str) {
+	        return parseInt(str, 10);
+	    }
+
+	    function isString(value) {
+	        return typeof value === 'string';
+	    }
+
+	    function isNumber(value) {
+	        return typeof value === 'number';
+	    }
+
+	    function isDefined(value) {
+	        return typeof value !== 'undefined';
+	    }
+
+	    function isUndefined(value) {
+	        return typeof value === 'undefined';
+	    }
+
+	    function isObject(value) {
+	        return value !== null && typeof value === 'object';
+	    }
+
+	    function isWindow(obj) {
+	        return obj && obj.window === obj;
+	    }
+
+	    function isNull(value) {
+	        return value === null;
+	    }
+
+	    function isNonNull(value) {
+	        return value !== null;
+	    }
+
+	    function isFunction(value) {
+	        return typeof value === 'function';
+	    }
+
+	    function isBoolean(value) {
+	        return typeof value === 'boolean';
+	    }
+
+	    function isArray(value) {
+	        return Array.isArray(value);
+	    }
+
+	    function extend() {
+	        return $.extend.apply($, arguments);
+	    }
+
+	    module.exports = {
+	        toInt: toInt,
+	        isString: isString,
+	        isNumber: isNumber,
+	        isDefined: isDefined,
+	        isUndefined: isUndefined,
+	        isObject: isObject,
+	        isFunction: isFunction,
+	        isBoolean: isBoolean,
+	        isArray: isArray,
+	        extend: extend
+	    };
+
+	}(window.jQuery));
+
+
+/***/ },
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -353,7 +700,7 @@
 
 
 /***/ },
-/* 3 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -531,7 +878,7 @@
 
 
 /***/ },
-/* 4 */
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -612,7 +959,7 @@
 
 
 /***/ },
-/* 5 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -809,7 +1156,7 @@
 
 
 /***/ },
-/* 6 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module*/
@@ -819,7 +1166,7 @@
 
 
 /***/ },
-/* 7 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -888,12 +1235,12 @@
 
 
 /***/ },
-/* 8 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global require*/
-	var Validate = __webpack_require__(12);
-	var Mask = __webpack_require__(13);
+	var Validate = __webpack_require__(19);
+	var Mask = __webpack_require__(20);
 	var Forms = function ($, NR, Ractive, prompt) {
 	    'use strict';
 	    var forms = this,
@@ -974,7 +1321,7 @@
 
 
 /***/ },
-/* 9 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Intervals = function () {
@@ -1011,7 +1358,7 @@
 
 
 /***/ },
-/* 10 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Timeouts = function () {
@@ -1048,7 +1395,7 @@
 
 
 /***/ },
-/* 11 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Prompt = function () {
@@ -1076,7 +1423,381 @@
 
 
 /***/ },
-/* 12 */
+/* 15 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module*/
+	(function () {
+	    'use strict';
+
+	    function escapeGroup(group) {
+	        return group.replace(/([=!:$\/()])/g, '\\$1');
+	    }
+
+	    function pathtoRegexp(path) {
+	        var keys = [],
+	            index = 0,
+	            PATH_REGEXP = new RegExp([
+	                '(\\\\.)',
+	                '([\\/.])?(?:\\:(\\w+)(?:\\(((?:\\\\.|[^)])*)\\))?|\\(((?:\\\\.|[^)])*)\\))([+*?])?',
+	                '([.+*?=^!:${}()[\\]|\\/])'
+	            ].join('|'), 'g');
+
+	        // Alter the path string into a usable regexp.
+	        path = path.replace(PATH_REGEXP, function (match, escaped, prefix, key, capture, group, suffix, escape) {
+	            // Avoiding re-escaping escaped characters.
+	            if (escaped) {
+	                return escaped;
+	            }
+
+	            // Escape regexp special characters.
+	            if (escape) {
+	                return '\\' + escape;
+	            }
+
+	            var repeat = suffix === '+' || suffix === '*',
+	                optional = suffix === '?' || suffix === '*';
+
+	            if (!key) {
+	                index += 1;
+	            }
+	            keys.push({
+	                name: key || index,
+	                delimiter: prefix || '/',
+	                optional: optional,
+	                repeat: repeat
+	            });
+
+	            // Escape the prefix character.
+	            prefix = prefix ? '\\' + prefix : '';
+
+	            // Match using the custom capturing group, or fallback to capturing
+	            // everything up to the next slash (or next period if the param was
+	            // prefixed with a period).
+	            capture = escapeGroup(capture || group || '[^' + (prefix || '\\/') + ']+?');
+
+	            // Allow parameters to be repeated more than once.
+	            if (repeat) {
+	                capture = capture + '(?:' + prefix + capture + ')*';
+	            }
+
+	            // Allow a parameter to be optional.
+	            if (optional) {
+	                return '(?:' + prefix + '(' + capture + '))?';
+	            }
+
+	            // Basic parameter support.
+	            return prefix + '(' + capture + ')';
+	        });
+
+	        return {
+	            regExp: new RegExp('^' + path + '$'),
+	            keys: keys
+	        };
+	    }
+
+	    module.exports = {
+	        pathtoRegexp: pathtoRegexp
+	    };
+	}());
+
+
+/***/ },
+/* 16 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function ($, Ractive) {
+	    'use strict';
+	    var helpers = __webpack_require__(4),
+
+	        templatePath = '',
+	        templateFormat = '',
+
+	        ajaxCache = true,
+
+	        cache = {},
+	        deferreds = {};
+
+	    function getTemplatePath() {
+	        return templatePath;
+	    }
+
+	    function setTemplatePath(path) {
+	        templatePath = path;
+	    }
+
+	    function getTemplateFormat() {
+	        return templateFormat;
+	    }
+
+	    function setTemplateFormat(format) {
+	        templateFormat = format;
+	    }
+
+	    function formatTemplateUrl(name) {
+	        return templatePath + name + templateFormat;
+	    }
+
+	    /**
+	     * Do the ajax call looking for template
+	     * @param   {string} path - The URI of the template
+	     * @returns {Object} - A deferreds with the ajax result
+	     */
+	    function getTemplate(path) {
+	        if (deferreds[path] === undefined) {
+	            deferreds[path] = $.ajax({
+	                url: formatTemplateUrl(path),
+	                dataType: "text",
+	                cache: ajaxCache,
+	                success: function (template) {
+	                    cache[path] = template;
+	                },
+	                error: function () {
+	                    cache[path] = 'Template não encontrado';
+	                }
+	            });
+	        }
+	        return deferreds[path];
+	    }
+
+	    /**
+	     * Return a promisse with a Ractive with the template file contents
+	     * @param   {string} path - The URI of the template
+	     * @returns {Object}
+	     */
+	    function loadOne(path) {
+	        return new Ractive.Promise(function (resolve, reject) {
+	            getTemplate(path).done(function () {
+	                resolve(cache[path]);
+	            });
+	        });
+	    }
+
+	    /**
+	     * Load multiple template files
+	     * @param   {Object} map - A list of templates
+	     * @returns {Object} - A promise with a Ractive with the template files contents
+	     */
+	    function loadMultiple(map) {
+	        return new Ractive.Promise(function (resolve, reject) {
+	            var pendents = 0,
+	                results = {},
+	                name,
+
+	                load = function (path) {
+	                    getTemplate(map[path]).done(function () {
+	                        results[path] = cache[map[path]];
+	                        pendents -= 1;
+	                        if (!pendents) {
+	                            resolve(results);
+	                        }
+	                    });
+	                };
+
+	            for (name in map) {
+	                if (map.hasOwnProperty(name)) {
+	                    pendents += 1;
+	                    load(name);
+	                }
+	            }
+	        });
+	    }
+
+	    /**
+	     * A load interface that can receive a string or a Object
+	     * and wrapp the request for a loadSingle or a loadMultiple template
+	     * @param   {(Object|string)} map - The template URI
+	     * @param   {function} [callback] - Optiona, can be used in 'then' callback of the promisse
+	     * @returns {Object} - Promise with the template
+	     */
+	    function load(map, callback) {
+	        var promise;
+	        if (typeof map === 'string') {
+	            promise = loadOne(map);
+	        } else {
+	            promise = loadMultiple(map);
+	        }
+	        if (typeof callback === 'undefined') {
+	            return promise;
+	        } else {
+	            promise.then(callback);
+	        }
+	    }
+
+	    function corrigeParams(state, template) {
+	        var options = helpers.extend({}, state);
+
+	        options.template = template;
+	        delete options.el;
+	        delete options.controller;
+	        delete options.serverLink;
+	        delete options.templateUrl;
+
+	        return options;
+	    }
+
+	    function extractTemplateParams(state) {
+	        if (state.templateUrl) {
+	            return new Ractive.Promise(function (resolve, reject) {
+	                load(state.templateUrl).then(function (template) {
+	                    resolve(corrigeParams(state, template));
+	                });
+	            });
+	        }
+	        return new Ractive.Promise(function (resolve, reject) {
+	            resolve(corrigeParams(state, state.template));
+	        });
+	    }
+
+	    function create(options) {
+	        return Ractive.extend(options);
+	    }
+
+	    module.exports = {
+	        extractParams: extractTemplateParams,
+	        create: create,
+	        getTemplatePath: getTemplatePath,
+	        getTemplateFormat: getTemplateFormat,
+	        setTemplatePath: setTemplatePath,
+	        setTemplateFormat: setTemplateFormat
+	    };
+	}(window.jQuery, window.Ractive));
+
+
+/***/ },
+/* 17 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function () {
+	    'use strict';
+
+	    var helpers = __webpack_require__(4);
+
+	    function Injector() {
+	        this.dependencies = {};
+	        this.flashDependencies = {};
+	    }
+
+	    Injector.prototype.register = function (key, value) {
+	        this.dependencies[key] = value;
+	    };
+
+	    Injector.prototype.registerFlash = function (key, value) {
+	        this.flashDependencies[key] = value;
+	    };
+
+	    Injector.prototype.clearFlash = function () {
+	        this.flashDependencies = {};
+	    };
+
+	    Injector.prototype.resolve = function (definition, scope) {
+	        var func = function () {},
+	            deps = [],
+	            args = [],
+	            self = this;
+
+	        if (helpers.isFunction(definition)) {
+	            func = definition;
+	            deps = func.toString().match(/^[function\s]*[\(]*\(\s*([\w,$@\s]*)\)/m)[1].replace(/ /g, '').split(',');
+	        } else if (helpers.isArray(definition)) {
+	            func = definition[definition.length - 1];
+	            deps = definition.splice(-1, 1);
+	        }
+	        return function () {
+	            var i, d, value;
+	            for (i = 0; i < deps.length; i += 1) {
+	                d = deps[i];
+	                if (self.dependencies[d] && d !== '') {
+	                    value = self.dependencies[d];
+	                    if (helpers.isFunction(value)) {
+	                        value = value();
+	                    }
+	                    args.push(value);
+	                }
+	                if (self.flashDependencies[d] && d !== '') {
+	                    args.push(self.flashDependencies[d]);
+	                }
+	            }
+	            return func.apply(scope || {}, args);
+	        };
+	    };
+
+	    module.exports = Injector;
+	}());
+
+
+/***/ },
+/* 18 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Ajax
+	 */
+	var $ = window.jQuery,
+	    Ajax = function () {
+	        'use strict';
+	        var ajax = this,
+	            serverAddress = '';
+
+	        this.getServerAddress = function () {
+	            return serverAddress;
+	        };
+
+	        this.setServerAddress = function (address) {
+	            serverAddress = address;
+	        };
+
+	        /**
+	         * Default parameteres
+	         *
+	         * @returns {Object} default configuration.
+	         */
+	        this.getDefaultParams = function () {
+	            return {
+	                dataType: "json",
+	                beforeSend: ajax.beforeSend,
+	                complete: ajax.complete,
+	                error: ajax.error,
+	                cache: false
+	            };
+	        };
+
+	        /**
+	         * Function URL format
+	         * @param   {string} location - Route URI
+	         * @returns {string} Complete URL from server
+	         */
+	        this.prepareUrl = function (location) {
+	            return serverAddress + location;
+	        };
+
+	        this.error = function () {
+	            throw "Ajax Error";
+	        };
+	        this.beforeSend = function () {};
+	        this.complete = function () {};
+
+	        /**
+	         * Run a AJAX request
+	         * @param {Object} params - jQuery AJAX params
+	         */
+	        this.run = function (params) {
+	            var url = params.url || '';
+	            params.url = this.prepareUrl(url);
+
+	            params = $.extend(this.getDefaultParams(url), params);
+
+	            $.ajax(params);
+	        };
+	    };
+	/*global module*/
+	module.exports = Ajax;
+
+
+/***/ },
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Validate = function ($, prompt) {
@@ -1277,7 +1998,7 @@
 
 
 /***/ },
-/* 13 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Mask = function ($) {

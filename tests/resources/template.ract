@@ -1,1 +1,5 @@
-<div id="{{id}}">{{message}}</div>
+<div>
+    {{#foo}}
+        {{bar}}
+    {{/foo}}
+</div>
