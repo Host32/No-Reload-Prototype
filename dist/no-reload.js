@@ -55,6 +55,7 @@
 	    window.NR = window.NoReload = NR.extend(NR, retro);
 	}(window.jQuery, window.Ractive));
 
+
 /***/ },
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
@@ -325,6 +326,7 @@
 	    module.exports = NoReload;
 	}());
 
+
 /***/ },
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
@@ -372,6 +374,10 @@
 	            states[name] = def;
 
 	            return appInstance;
+	        }
+
+	        function isRegisteredState(name) {
+	            return helpers.isDefined(states[name]);
 	        }
 
 	        function registerController(name, construtor) {
@@ -551,7 +557,8 @@
 	            start: start,
 	            startAnchorNavigation: startAnchorNavigation,
 	            go: goToState,
-	            goToUrl: goToUrl
+	            goToUrl: goToUrl,
+	            isRegisteredState: isRegisteredState
 	        };
 
 	        return appInstance;
