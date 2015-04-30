@@ -1,57 +1,169 @@
-/*global module, require*/
+/**
+ * Scope.js: https://github.com/alinz/scopejs
+ */
+/*global module*/
+/*jslint plusplus:true*/
 (function () {
     'use strict';
 
-    var helpers = require('./helpers.js');
+    function $Injector() {
+        var queues = {},
+            modules = {},
 
-    function Injector() {
-        this.dependencies = {};
-        this.flashDependencies = {};
-    }
+            invoke;
 
-    Injector.prototype.register = function (key, value) {
-        this.dependencies[key] = value;
-    };
-
-    Injector.prototype.registerFlash = function (key, value) {
-        this.flashDependencies[key] = value;
-    };
-
-    Injector.prototype.clearFlash = function () {
-        this.flashDependencies = {};
-    };
-
-    Injector.prototype.resolve = function (definition, scope) {
-        var func = function () {},
-            deps = [],
-            args = [],
-            self = this;
-
-        if (helpers.isFunction(definition)) {
-            func = definition;
-            deps = func.toString().match(/^[function\s]*[\(]*\(\s*([\w,$@\s]*)\)/m)[1].replace(/ /g, '').split(',');
-        } else if (helpers.isArray(definition)) {
-            func = definition[definition.length - 1];
-            deps = definition.splice(-1, 1);
+        function task(func) {
+            setTimeout(func, 0);
         }
-        return function () {
-            var i, d, value;
-            for (i = 0; i < deps.length; i += 1) {
-                d = deps[i];
-                if (self.dependencies[d] && d !== '') {
-                    value = self.dependencies[d];
-                    if (helpers.isFunction(value)) {
-                        value = value();
-                    }
-                    args.push(value);
+
+        function forEach(arr, func) {
+            var length = arr ? arr.length : 0,
+                i;
+            for (i = 0; i < length; i++) {
+                func(arr[i], i);
+            }
+        }
+
+        function asyncMap(arr, func, done) {
+            var results = [],
+                length = arr.length,
+                i = 0;
+
+            if (!length) {
+                task(function () {
+                    done(results);
+                });
+            } else {
+                forEach(arr, function (item, index) {
+                    task(function () {
+                        func(item, function (result) {
+                            i++;
+                            results[index] = result;
+                            if (i === length) {
+                                done(results);
+                            }
+                        });
+                    });
+                });
+            }
+        }
+
+        /**
+         * Conditions:
+         * 1: Module has been registered but not loaded
+         * 2: Module has been registered and loaded
+         * 3: Module has not been registered
+         *
+         * @param name
+         * @param func
+         */
+
+        function queueOrGet(name, func) {
+            if (!modules[name]) {
+                if (!invoke.get) {
+                    throw "Err1";
                 }
-                if (self.flashDependencies[d] && d !== '') {
-                    args.push(self.flashDependencies[d]);
+                modules[name] = {};
+                if (!queues[name]) {
+                    queues[name] = [];
+                }
+                queues[name].push(func);
+                invoke.get(name, function (o) {
+                    if (o) {
+                        modules[name] = {
+                            o: o
+                        };
+                    }
+                    func();
+                });
+            } else {
+                if (modules[name].o !== undefined) {
+                    func();
+                } else {
+                    if (!queues[name]) {
+                        queues[name] = [];
+                    }
+                    queues[name].push(func);
                 }
             }
-            return func.apply(scope || {}, args);
-        };
-    };
+        }
 
-    module.exports = Injector;
+        function runQueue(name) {
+            forEach(queues[name], function (func) {
+                func();
+            });
+            delete queues[name];
+        }
+
+        function getFuncArgs(func) {
+            var args = /^function\s*[\w\d]*\(([\w\d,_$\s]*)\)/.exec(func.toString())[1];
+            return args === '' ? [] : args.replace(/\s+/gm, '').split(",");
+        }
+
+        /**
+         * Conditions:
+         * 1: Anonimous function without invoke
+         * 2: Anonimous function with scope
+         * 3: Named module withoud scope
+         * 4: Named module with scope
+         */
+        invoke = function () {
+            var args = arguments,
+                info,
+                target,
+                obj = {};
+
+            if (typeof args[0] === 'string') {
+                obj.n = args[0];
+                info = args[1];
+                obj.s = args[2] || {};
+            } else {
+                info = args[0];
+                obj.s = args[1] || {};
+            }
+
+            if (typeof info === 'function') {
+                obj.d = getFuncArgs(info);
+                obj.c = info;
+            } else {
+                obj.c = info.pop();
+                obj.d = info;
+            }
+
+            if (obj.n) {
+                //We are checking whether module is requested or loaded.
+                //if target object is available + dependencies, it means that we have duplicates
+                //if we have only target but not dependencies, it means that module was requested by get call and module
+                //has been downloaded and now the real module is registering it self.
+                target = modules[obj.n];
+                if (target && target.d) {
+                    throw "Err2: " + obj.n;
+                }
+                modules[obj.n] = obj;
+            }
+
+            asyncMap(obj.d, function (dependency, func) {
+                queueOrGet(dependency, function () {
+                    func(modules[dependency].o);
+                });
+            }, function (loadedDependencies) {
+                obj.o = obj.c.apply(obj.s, loadedDependencies);
+                if (obj.n) {
+                    runQueue(obj.n);
+                }
+            });
+        };
+
+        invoke.clear = function (name) {
+            if (queues[name]) {
+                throw "Err3: " + name;
+            }
+
+            delete modules[name];
+        };
+
+        return invoke;
+    }
+
+    module.exports = $Injector;
 }());
