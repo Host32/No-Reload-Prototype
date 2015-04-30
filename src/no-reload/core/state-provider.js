@@ -98,13 +98,14 @@
                 i;
 
             for (i = 0; i < subStates.length; i += 1) {
+                fullStateName += subStates[i];
+
                 if (subStates[i] !== currentStateTree[i] || diferentTree) {
                     diferentTree = true;
-
-                    fullStateName += subStates[i];
                     resolveState(fullStateName, params);
-                    fullStateName += '.';
                 }
+
+                fullStateName += '.';
             }
             currentStateTree = subStates;
 

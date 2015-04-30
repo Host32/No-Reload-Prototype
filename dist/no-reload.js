@@ -1628,6 +1628,7 @@
 	    module.exports = Module;
 	}(window.jQuery));
 
+
 /***/ },
 /* 19 */
 /***/ function(module, exports, __webpack_require__) {
@@ -2274,6 +2275,7 @@
 	    module.exports = $TemplateProvider;
 	}(window.jQuery, window.Ractive));
 
+
 /***/ },
 /* 23 */
 /***/ function(module, exports, __webpack_require__) {
@@ -2545,13 +2547,14 @@
 	                i;
 
 	            for (i = 0; i < subStates.length; i += 1) {
+	                fullStateName += subStates[i];
+
 	                if (subStates[i] !== currentStateTree[i] || diferentTree) {
 	                    diferentTree = true;
-
-	                    fullStateName += subStates[i];
 	                    resolveState(fullStateName, params);
-	                    fullStateName += '.';
 	                }
+
+	                fullStateName += '.';
 	            }
 	            currentStateTree = subStates;
 
