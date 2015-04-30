@@ -43,6 +43,10 @@
             return appInstance;
         }
 
+        function isRegisteredState(name) {
+            return helpers.isDefined(states[name]);
+        }
+
         function registerController(name, construtor) {
             controllers[name] = construtor;
 
@@ -220,7 +224,8 @@
             start: start,
             startAnchorNavigation: startAnchorNavigation,
             go: goToState,
-            goToUrl: goToUrl
+            goToUrl: goToUrl,
+            isRegisteredState: isRegisteredState
         };
 
         return appInstance;
