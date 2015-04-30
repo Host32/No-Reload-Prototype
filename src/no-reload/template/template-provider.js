@@ -1,5 +1,5 @@
 /*global module, require*/
-(function ($, Ractive) {
+(function (Ractive) {
     'use strict';
     var helpers = require('../helpers'),
         extend = helpers.extend,
@@ -8,9 +8,9 @@
         partialProvider = require('./partial-provider'),
         componentProvider = require('./component-provider');
 
-    function $TemplateProvider() {
+    function $TemplateProvider($ajax) {
         var instance,
-            loader = loaderProvider(),
+            loader = loaderProvider($ajax),
             partialManager = partialProvider(loader),
             componentManager = componentProvider(),
             components = {},
@@ -119,4 +119,4 @@
     }
 
     module.exports = $TemplateProvider;
-}(window.jQuery, window.Ractive));
+}(window.Ractive));

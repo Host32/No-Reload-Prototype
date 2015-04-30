@@ -1,5 +1,5 @@
 /*global module, require*/
-(function ($, Ractive) {
+(function (Ractive) {
     'use strict';
 
     function ComponentProvider() {
@@ -82,4 +82,4 @@
     }
 
     module.exports = ComponentProvider;
-}(window.jQuery, window.Ractive));
+}(window.Ractive));

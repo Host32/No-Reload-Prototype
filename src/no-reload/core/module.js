@@ -1,5 +1,5 @@
 /*global module, require*/
-(function ($) {
+(function () {
     'use strict';
     var $Injector = require('./injector'),
         $Ajax = require('../remote/ajax'),
@@ -152,4 +152,4 @@
     }
 
     module.exports = Module;
-}(window.jQuery));
+}());
