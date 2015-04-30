@@ -94,12 +94,16 @@
 
             var subStates = name.split('.'),
                 diferentTree = false,
+                fullStateName = '',
                 i;
 
             for (i = 0; i < subStates.length; i += 1) {
                 if (subStates[i] !== currentStateTree[i] || diferentTree) {
                     diferentTree = true;
-                    resolveState(subStates[i], params);
+
+                    fullStateName += subStates[i];
+                    resolveState(fullStateName, params);
+                    fullStateName += '.';
                 }
             }
             currentStateTree = subStates;

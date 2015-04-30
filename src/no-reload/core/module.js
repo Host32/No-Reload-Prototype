@@ -57,6 +57,22 @@
             return instance;
         }
 
+        function partial(name, definition) {
+            $injector(function ($templateProvider) {
+                $templateProvider.partial(name, definition);
+            });
+
+            return instance;
+        }
+
+        function component(name, definition) {
+            $injector(function ($templateProvider) {
+                $templateProvider.component(name, definition);
+            });
+
+            return instance;
+        }
+
         function go(state, params) {
             $injector(function ($stateProvider) {
                 $stateProvider.go(state, params);
@@ -120,6 +136,8 @@
             factory: factory,
             controller: controller,
             state: state,
+            component: component,
+            partial: partial,
             go: go,
             goToUrl: goToUrl,
             config: config,
