@@ -5,9 +5,9 @@
     QUnit.test("Template statico", function (assert) {
         var done = assert.async();
 
-        app.factory("teste", function ($ajax, $template) {
-            assert.equal($ajax.getServerAddress(), '', 'Server address correto');
-            assert.equal($template.getTemplatePath(), '', 'Template path correto');
+        app.factory("teste", function ($server, $templateProvider) {
+            assert.equal($server.getServerAddress(), '', 'Server address correto');
+            assert.equal($templateProvider.getTemplatePath(), '', 'Template path correto');
             return {
                 ok: 'testeOk'
             };
@@ -59,13 +59,13 @@
         app.state("home3", {
             el: '#test-space',
             templateUrl: 'resources/template.ract',
-            serverLink: 'resources/content.json',
+            dataUrl: 'resources/content.json',
             controller: "Home3"
         });
 
-        app.controller("Home3", function ($serverResponse) {
-            this.set($serverResponse);
-            assert.equal($serverResponse.ok, true, 'Resposta do servidor ok');
+        app.controller("Home3", function ($data) {
+            this.set($data);
+            assert.equal($data.ok, true, 'Resposta do servidor ok');
             done();
         });
 

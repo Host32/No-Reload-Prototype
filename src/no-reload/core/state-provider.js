@@ -2,37 +2,46 @@
 (function () {
     'use strict';
 
-    var $UrlResolver = require('./url-resolver');
+    var helpers = require('../helpers'),
+        isDefined = helpers.isDefined;
 
-    function $StateProvider($injector, $templateProvider, $controllerProvider, $server) {
-        var states = {},
-            currentStateTree = [],
-
-            instance;
-
-        $injector("$urlResolver", $UrlResolver);
+    function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $urlResolver) {
+        var instance,
+            states = {},
+            currentStateTree = [];
 
         function register(name, def) {
-            $injector(function ($urlResolver) {
-                if (def.url) {
-                    def.urlReg = $urlResolver.pathtoRegexp(def.url);
-                }
-                states[name] = def;
-            });
+            if (def.url) {
+                def.urlObject = $urlResolver.createUrlObject(def.url);
+            }
+            if (def.dataUrl) {
+                def.dataUrlFormat = def.dataUrl;
+            }
+            states[name] = def;
 
             return instance;
         }
 
-        function runState(state, myTemplate, serverResponse) {
-            $injector('$serverResponse', function () {
-                return serverResponse;
+        function updateDataUrl(name, params) {
+            if (states[name]) {
+                states[name].dataUrl = $urlResolver.replaceUrl(params, states[name].dataUrlFormat);
+            }
+        }
+
+        function runState(state, params, myTemplate, data) {
+            $injector.clear('$data');
+            $injector.clear('$stateParams');
+
+            $injector('$data', function () {
+                return data;
+            });
+            $injector('$stateParams', function () {
+                return params;
             });
 
             $controllerProvider.resolve(state.controller, myTemplate);
 
             myTemplate.render(state.el);
-
-            $injector.clear('$serverResponse');
         }
 
         function resolveState(name, params) {
@@ -41,19 +50,19 @@
             }
 
             var state = states[name],
-                serverLink = state.serverLink,
-                serverResponse,
+                dataUrl = state.dataUrl,
+                data = state.data || {},
                 myTemplate,
                 completeRequest = false,
                 completeTemplate = false;
 
-            if (serverLink) {
-                $server.get(serverLink, function (response) {
-                    serverResponse = response;
+            if (dataUrl) {
+                $server.get(dataUrl, function (response) {
+                    data = response;
 
                     completeRequest = true;
                     if (completeTemplate) {
-                        runState(state, myTemplate, serverResponse);
+                        runState(state, params, myTemplate, data);
                     }
                 });
             } else {
@@ -64,7 +73,7 @@
 
                 completeTemplate = true;
                 if (completeRequest) {
-                    runState(state, myTemplate, serverResponse);
+                    runState(state, params, myTemplate, data);
                 }
             });
         }
@@ -98,10 +107,45 @@
             return instance;
         }
 
+        function findByUrl(url) {
+            var key, state, urlMatch;
+
+            for (key in states) {
+                if (states.hasOwnProperty(key) && states[key].url) {
+                    urlMatch = $urlResolver.resolve(states[key].urlObject, url);
+                    if (urlMatch) {
+                        urlMatch.stateName = key;
+                        return urlMatch;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function goToUrl(url) {
+            var found = findByUrl(url);
+
+            if (found) {
+                updateDataUrl(found.stateName, found.params);
+                go(found.stateName, found.params);
+            }
+        }
+
+        function isRegisteredState(name) {
+            return isDefined(states[name]);
+        }
+
+        function isRegisteredUrl(url) {
+            return findByUrl(url) !== null;
+        }
+
         instance = {
             register: register,
             go: go,
-            reload: reload
+            reload: reload,
+            isRegisteredState: isRegisteredState,
+            isRegisteredUrl: isRegisteredUrl,
+            goToUrl: goToUrl
         };
 
         return instance;

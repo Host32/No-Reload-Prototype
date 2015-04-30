@@ -1,20 +1,16 @@
 /*global module, require*/
 (function ($) {
     'use strict';
-    var moduleFactory = require('./module');
+    var moduleFactory = require('./module'),
 
-    function moduleProvider() {
-        var modules = {};
+        modules = {},
 
-        function create(name, deps) {
+        moduleProvider = function (name, deps) {
             if (!modules[name]) {
                 modules[name] = moduleFactory(deps);
             }
             return modules[name];
-        }
-
-        return {
-            create: create
         };
-    }
+
+    module.exports = moduleProvider;
 }(window.jQuery));

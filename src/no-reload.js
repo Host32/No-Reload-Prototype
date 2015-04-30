@@ -6,5 +6,5 @@
         Retro = require('./retro/core'),
         retro = new Retro($, Ractive);
 
-    window.NR = window.NoReload = NR.extend(NR, retro);
+    window.NR = window.NoReload = NR.extend({}, NR, retro);
 }(window.jQuery, window.Ractive));

@@ -2,19 +2,13 @@
 (function () {
     'use strict';
 
-    var helpers = require('./helpers'),
+    var helpers = require('../helpers'),
         extend = helpers.extend;
 
     function $Server($ajax) {
         var instance,
             serverAddress = '',
-            defaultParams = {
-                dataType: "json",
-                beforeSend: instance.beforeSend,
-                complete: instance.complete,
-                error: instance.error,
-                cache: false
-            },
+            defaultParams,
 
             prepareUrl = function (location) {
                 return serverAddress + location;
@@ -74,6 +68,14 @@
             complete: complete,
             request: run,
             get: get
+        };
+
+        defaultParams = {
+            dataType: "json",
+            beforeSend: instance.beforeSend,
+            complete: instance.complete,
+            error: instance.error,
+            cache: false
         };
 
         return instance;

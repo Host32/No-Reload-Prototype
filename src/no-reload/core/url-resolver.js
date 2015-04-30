@@ -7,7 +7,7 @@
             return group.replace(/([=!:$\/()])/g, '\\$1');
         }
 
-        function pathtoRegexp(path) {
+        function createUrlObject(path) {
             var keys = [],
                 index = 0,
                 PATH_REGEXP = new RegExp([
@@ -68,8 +68,51 @@
                 keys: keys
             };
         }
+
+        function extractParams(urlObject, url) {
+            var matches = url.match(urlObject.regExp),
+                matchedObject = {},
+                matchedKey,
+                keyIndice,
+                key;
+
+            for (keyIndice in urlObject.keys) {
+                if (urlObject.keys.hasOwnProperty(keyIndice)) {
+                    key = urlObject.keys[keyIndice];
+                    matchedKey = parseInt(keyIndice, 10) + 1;
+                    matchedObject[key.name] = matches[matchedKey];
+                }
+            }
+
+            return matchedObject;
+        }
+
+        function replaceUrl(params, url) {
+            var key;
+
+            for (key in params) {
+                if (params.hasOwnProperty(key)) {
+                    url = url.replace('{' + key + '}', params[key]);
+                }
+            }
+            return url;
+        }
+
+        function resolve(urlObject, url) {
+            if (urlObject.regExp.test(url)) {
+                var params = extractParams(urlObject, url);
+                return {
+                    ulr: replaceUrl(params, url),
+                    params: params
+                };
+            }
+            return null;
+        }
+
         return {
-            pathtoRegexp: pathtoRegexp
+            createUrlObject: createUrlObject,
+            resolve: resolve,
+            replaceUrl: replaceUrl
         };
     }
 

@@ -52,9 +52,8 @@
 	        Retro = __webpack_require__(2),
 	        retro = new Retro($, Ractive);
 
-	    window.NR = window.NoReload = NR.extend(NR, retro);
+	    window.NR = window.NoReload = NR.extend({}, NR, retro);
 	}(window.jQuery, window.Ractive));
-
 
 /***/ },
 /* 1 */
@@ -65,23 +64,12 @@
 	    'use strict';
 
 	    var appProvider = __webpack_require__(3),
-	        helpers = __webpack_require__(4),
+	        helpers = __webpack_require__(4);
 
-	        apps = {};
-
-
-	    function app(name) {
-	        if (!apps[name]) {
-	            apps[name] = appProvider.create();
-	        }
-	        return apps[name];
-	    }
-
-	    module.exports = helpers.extend({
-	        app: app
+	    module.exports = helpers.extend({}, {
+	        app: appProvider
 	    }, helpers);
 	}());
-
 
 /***/ },
 /* 2 */
@@ -335,240 +323,10 @@
 	(function ($) {
 	    'use strict';
 	    var helpers = __webpack_require__(4),
-	        router = __webpack_require__(15),
-	        template = __webpack_require__(16),
+	        moduleProvider = __webpack_require__(15);
 
-	        Injector = __webpack_require__(17),
-	        Ajax = __webpack_require__(18);
-
-	    function create() {
-	        var injector = new Injector(),
-	            ajax = new Ajax(),
-
-	            currentStateTree = [],
-
-	            states = {},
-	            controllers = {},
-
-	            startupMethods = [],
-
-	            appInstance;
-
-	        injector.register('$template', template);
-	        injector.register('$ajax', ajax);
-
-	        function registerService(name, factory) {
-	            if (helpers.isFunction(factory) || helpers.isArray(factory)) {
-	                injector.register(name, injector.resolve(factory));
-	            } else {
-	                injector.register(name, factory);
-	            }
-
-	            return appInstance;
-	        }
-
-	        function registerState(name, def) {
-	            if (def.url) {
-	                def.urlReg = router.pathtoRegexp(def.url);
-	            }
-	            states[name] = def;
-
-	            return appInstance;
-	        }
-
-	        function isRegisteredState(name) {
-	            return helpers.isDefined(states[name]);
-	        }
-
-	        function registerController(name, construtor) {
-	            controllers[name] = construtor;
-
-	            return appInstance;
-	        }
-
-	        function resolveController(name, scope) {
-	            if (helpers.isFunction(name)) {
-	                return function () {
-	                    name.apply(scope);
-	                };
-	            } else if (!controllers[name]) {
-	                return function () {};
-	            }
-	            return injector.resolve(controllers[name], scope);
-	        }
-
-
-	        function registerStartup(method) {
-	            startupMethods.push(method);
-
-	            return appInstance;
-	        }
-
-	        function runState(state, myTemplate, serverResponse) {
-	            injector.registerFlash('$serverResponse', serverResponse);
-
-	            var controller = resolveController(state.controller, myTemplate);
-
-	            controller();
-
-	            myTemplate.render(state.el);
-
-	            injector.clearFlash();
-	        }
-
-	        function resolveState(name, params) {
-	            if (!states[name]) {
-	                return;
-	            }
-
-	            var state = states[name],
-	                serverLink = state.serverLink,
-	                serverResponse,
-	                myTemplate,
-	                completeRequest = false,
-	                completeTemplate = false;
-
-	            if (serverLink) {
-	                ajax.run({
-	                    url: serverLink,
-	                    type: 'get',
-	                    success: function (response) {
-	                        serverResponse = response;
-
-	                        completeRequest = true;
-	                        if (completeTemplate) {
-	                            runState(state, myTemplate, serverResponse);
-	                        }
-	                    }
-	                });
-	            } else {
-	                completeRequest = true;
-	            }
-	            template.extractParams(state).then(function (options) {
-	                var Template = template.create(options);
-	                myTemplate = new Template();
-
-	                completeTemplate = true;
-	                if (completeRequest) {
-	                    runState(state, myTemplate, serverResponse);
-	                }
-	            });
-	        }
-
-	        function reload(params) {
-	            var i;
-	            for (i = 0; i < currentStateTree.length; i += 1) {
-	                resolveState(states[currentStateTree[i]], params);
-	            }
-	        }
-
-	        function goToState(name, params) {
-	            if (!states[name]) {
-	                return;
-	            }
-
-	            var subStates = name.split('.'),
-	                i;
-
-	            for (i = 0; i < subStates.length; i += 1) {
-	                if (subStates[i] !== currentStateTree[i]) {
-	                    resolveState(subStates[i], params);
-	                }
-	            }
-	            currentStateTree = subStates;
-	        }
-
-	        function extractParams(state, url) {
-	            var urlReg = state.urlReg,
-	                matches = url.match(urlReg.regExp),
-	                matchedObject = {},
-	                matchedKey,
-	                keyIndice,
-	                key;
-
-	            for (keyIndice in urlReg.keys) {
-	                if (urlReg.keys.hasOwnProperty(keyIndice)) {
-	                    key = urlReg.keys[keyIndice];
-	                    matchedKey = parseInt(keyIndice, 10) + 1;
-	                    matchedObject[key.name] = matches[matchedKey];
-	                }
-	            }
-
-	            return matchedObject;
-	        }
-
-	        function resolveUrl(url) {
-	            var key, state;
-
-	            for (key in states) {
-	                if (states.hasOwnProperty(key) && states[key].url) {
-	                    state = states[key];
-	                    if (state.urlReg.regExp.test(url)) {
-	                        return {
-	                            state: state,
-	                            params: extractParams(state, url)
-	                        };
-	                    }
-	                }
-	            }
-	            return null;
-	        }
-
-	        function goToUrl(url) {
-	            var found = resolveUrl(url);
-	            if (found) {
-	                goToState(found.state, found.params);
-	            }
-	        }
-
-	        function startup() {
-	            var i;
-	            for (i = 0; i < startupMethods.length; i += 1) {
-	                injector.resolve(startupMethods[i])();
-	            }
-	        }
-
-	        function startAnchorNavigation() {
-	            startup();
-
-	            /*global window*/
-	            /*global location*/
-	            $(window).on('hashchange', function () {
-	                var name = location.hash.replace(/^#/, '');
-	                goToUrl(name);
-	            });
-
-	            return appInstance;
-	        }
-
-	        function start() {
-	            startup();
-
-	            return appInstance;
-	        }
-
-	        appInstance = {
-	            factory: registerService,
-	            startup: registerStartup,
-	            state: registerState,
-	            controller: registerController,
-	            getController: resolveController,
-	            resolve: injector.resolve,
-	            start: start,
-	            startAnchorNavigation: startAnchorNavigation,
-	            go: goToState,
-	            goToUrl: goToUrl,
-	            isRegisteredState: isRegisteredState
-	        };
-
-	        return appInstance;
-	    }
-
-	    module.exports = {
-	        create: create
-	    };
+	    module.exports = moduleProvider;
 	}(window.jQuery));
-
 
 /***/ },
 /* 4 */
@@ -644,7 +402,6 @@
 	    };
 
 	}(window.jQuery));
-
 
 /***/ },
 /* 5 */
@@ -1246,8 +1003,8 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global require*/
-	var Validate = __webpack_require__(19);
-	var Mask = __webpack_require__(20);
+	var Validate = __webpack_require__(16);
+	var Mask = __webpack_require__(17);
 	var Forms = function ($, NR, Ractive, prompt) {
 	    'use strict';
 	    var forms = this,
@@ -1433,378 +1190,25 @@
 /* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/*global module*/
-	(function () {
+	/*global module, require*/
+	(function ($) {
 	    'use strict';
+	    var moduleFactory = __webpack_require__(18),
 
-	    function escapeGroup(group) {
-	        return group.replace(/([=!:$\/()])/g, '\\$1');
-	    }
+	        modules = {},
 
-	    function pathtoRegexp(path) {
-	        var keys = [],
-	            index = 0,
-	            PATH_REGEXP = new RegExp([
-	                '(\\\\.)',
-	                '([\\/.])?(?:\\:(\\w+)(?:\\(((?:\\\\.|[^)])*)\\))?|\\(((?:\\\\.|[^)])*)\\))([+*?])?',
-	                '([.+*?=^!:${}()[\\]|\\/])'
-	            ].join('|'), 'g');
-
-	        // Alter the path string into a usable regexp.
-	        path = path.replace(PATH_REGEXP, function (match, escaped, prefix, key, capture, group, suffix, escape) {
-	            // Avoiding re-escaping escaped characters.
-	            if (escaped) {
-	                return escaped;
+	        moduleProvider = function (name, deps) {
+	            if (!modules[name]) {
+	                modules[name] = moduleFactory(deps);
 	            }
-
-	            // Escape regexp special characters.
-	            if (escape) {
-	                return '\\' + escape;
-	            }
-
-	            var repeat = suffix === '+' || suffix === '*',
-	                optional = suffix === '?' || suffix === '*';
-
-	            if (!key) {
-	                index += 1;
-	            }
-	            keys.push({
-	                name: key || index,
-	                delimiter: prefix || '/',
-	                optional: optional,
-	                repeat: repeat
-	            });
-
-	            // Escape the prefix character.
-	            prefix = prefix ? '\\' + prefix : '';
-
-	            // Match using the custom capturing group, or fallback to capturing
-	            // everything up to the next slash (or next period if the param was
-	            // prefixed with a period).
-	            capture = escapeGroup(capture || group || '[^' + (prefix || '\\/') + ']+?');
-
-	            // Allow parameters to be repeated more than once.
-	            if (repeat) {
-	                capture = capture + '(?:' + prefix + capture + ')*';
-	            }
-
-	            // Allow a parameter to be optional.
-	            if (optional) {
-	                return '(?:' + prefix + '(' + capture + '))?';
-	            }
-
-	            // Basic parameter support.
-	            return prefix + '(' + capture + ')';
-	        });
-
-	        return {
-	            regExp: new RegExp('^' + path + '$'),
-	            keys: keys
+	            return modules[name];
 	        };
-	    }
 
-	    module.exports = {
-	        pathtoRegexp: pathtoRegexp
-	    };
-	}());
-
+	    module.exports = moduleProvider;
+	}(window.jQuery));
 
 /***/ },
 /* 16 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/*global module, require*/
-	(function ($, Ractive) {
-	    'use strict';
-	    var helpers = __webpack_require__(4),
-
-	        templatePath = '',
-	        templateFormat = '',
-
-	        ajaxCache = true,
-
-	        cache = {},
-	        deferreds = {};
-
-	    function getTemplatePath() {
-	        return templatePath;
-	    }
-
-	    function setTemplatePath(path) {
-	        templatePath = path;
-	    }
-
-	    function getTemplateFormat() {
-	        return templateFormat;
-	    }
-
-	    function setTemplateFormat(format) {
-	        templateFormat = format;
-	    }
-
-	    function formatTemplateUrl(name) {
-	        return templatePath + name + templateFormat;
-	    }
-
-	    /**
-	     * Do the ajax call looking for template
-	     * @param   {string} path - The URI of the template
-	     * @returns {Object} - A deferreds with the ajax result
-	     */
-	    function getTemplate(path) {
-	        if (deferreds[path] === undefined) {
-	            deferreds[path] = $.ajax({
-	                url: formatTemplateUrl(path),
-	                dataType: "text",
-	                cache: ajaxCache,
-	                success: function (template) {
-	                    cache[path] = template;
-	                },
-	                error: function () {
-	                    cache[path] = 'Template não encontrado';
-	                }
-	            });
-	        }
-	        return deferreds[path];
-	    }
-
-	    /**
-	     * Return a promisse with a Ractive with the template file contents
-	     * @param   {string} path - The URI of the template
-	     * @returns {Object}
-	     */
-	    function loadOne(path) {
-	        return new Ractive.Promise(function (resolve, reject) {
-	            getTemplate(path).done(function () {
-	                resolve(cache[path]);
-	            });
-	        });
-	    }
-
-	    /**
-	     * Load multiple template files
-	     * @param   {Object} map - A list of templates
-	     * @returns {Object} - A promise with a Ractive with the template files contents
-	     */
-	    function loadMultiple(map) {
-	        return new Ractive.Promise(function (resolve, reject) {
-	            var pendents = 0,
-	                results = {},
-	                name,
-
-	                load = function (path) {
-	                    getTemplate(map[path]).done(function () {
-	                        results[path] = cache[map[path]];
-	                        pendents -= 1;
-	                        if (!pendents) {
-	                            resolve(results);
-	                        }
-	                    });
-	                };
-
-	            for (name in map) {
-	                if (map.hasOwnProperty(name)) {
-	                    pendents += 1;
-	                    load(name);
-	                }
-	            }
-	        });
-	    }
-
-	    /**
-	     * A load interface that can receive a string or a Object
-	     * and wrapp the request for a loadSingle or a loadMultiple template
-	     * @param   {(Object|string)} map - The template URI
-	     * @param   {function} [callback] - Optiona, can be used in 'then' callback of the promisse
-	     * @returns {Object} - Promise with the template
-	     */
-	    function load(map, callback) {
-	        var promise;
-	        if (typeof map === 'string') {
-	            promise = loadOne(map);
-	        } else {
-	            promise = loadMultiple(map);
-	        }
-	        if (typeof callback === 'undefined') {
-	            return promise;
-	        } else {
-	            promise.then(callback);
-	        }
-	    }
-
-	    function corrigeParams(state, template) {
-	        var options = helpers.extend({}, state);
-
-	        options.template = template;
-	        delete options.el;
-	        delete options.controller;
-	        delete options.serverLink;
-	        delete options.templateUrl;
-
-	        return options;
-	    }
-
-	    function extractTemplateParams(state) {
-	        if (state.templateUrl) {
-	            return new Ractive.Promise(function (resolve, reject) {
-	                load(state.templateUrl).then(function (template) {
-	                    resolve(corrigeParams(state, template));
-	                });
-	            });
-	        }
-	        return new Ractive.Promise(function (resolve, reject) {
-	            resolve(corrigeParams(state, state.template));
-	        });
-	    }
-
-	    function create(options) {
-	        return Ractive.extend(options);
-	    }
-
-	    module.exports = {
-	        extractParams: extractTemplateParams,
-	        create: create,
-	        getTemplatePath: getTemplatePath,
-	        getTemplateFormat: getTemplateFormat,
-	        setTemplatePath: setTemplatePath,
-	        setTemplateFormat: setTemplateFormat
-	    };
-	}(window.jQuery, window.Ractive));
-
-
-/***/ },
-/* 17 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/*global module, require*/
-	(function () {
-	    'use strict';
-
-	    var helpers = __webpack_require__(4);
-
-	    function Injector() {
-	        this.dependencies = {};
-	        this.flashDependencies = {};
-	    }
-
-	    Injector.prototype.register = function (key, value) {
-	        this.dependencies[key] = value;
-	    };
-
-	    Injector.prototype.registerFlash = function (key, value) {
-	        this.flashDependencies[key] = value;
-	    };
-
-	    Injector.prototype.clearFlash = function () {
-	        this.flashDependencies = {};
-	    };
-
-	    Injector.prototype.resolve = function (definition, scope) {
-	        var func = function () {},
-	            deps = [],
-	            args = [],
-	            self = this;
-
-	        if (helpers.isFunction(definition)) {
-	            func = definition;
-	            deps = func.toString().match(/^[function\s]*[\(]*\(\s*([\w,$@\s]*)\)/m)[1].replace(/ /g, '').split(',');
-	        } else if (helpers.isArray(definition)) {
-	            func = definition[definition.length - 1];
-	            deps = definition.splice(-1, 1);
-	        }
-	        return function () {
-	            var i, d, value;
-	            for (i = 0; i < deps.length; i += 1) {
-	                d = deps[i];
-	                if (self.dependencies[d] && d !== '') {
-	                    value = self.dependencies[d];
-	                    if (helpers.isFunction(value)) {
-	                        value = value();
-	                    }
-	                    args.push(value);
-	                }
-	                if (self.flashDependencies[d] && d !== '') {
-	                    args.push(self.flashDependencies[d]);
-	                }
-	            }
-	            return func.apply(scope || {}, args);
-	        };
-	    };
-
-	    module.exports = Injector;
-	}());
-
-
-/***/ },
-/* 18 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Ajax
-	 */
-	var $ = window.jQuery,
-	    Ajax = function () {
-	        'use strict';
-	        var ajax = this,
-	            serverAddress = '';
-
-	        this.getServerAddress = function () {
-	            return serverAddress;
-	        };
-
-	        this.setServerAddress = function (address) {
-	            serverAddress = address;
-	        };
-
-	        /**
-	         * Default parameteres
-	         *
-	         * @returns {Object} default configuration.
-	         */
-	        this.getDefaultParams = function () {
-	            return {
-	                dataType: "json",
-	                beforeSend: ajax.beforeSend,
-	                complete: ajax.complete,
-	                error: ajax.error,
-	                cache: false
-	            };
-	        };
-
-	        /**
-	         * Function URL format
-	         * @param   {string} location - Route URI
-	         * @returns {string} Complete URL from server
-	         */
-	        this.prepareUrl = function (location) {
-	            return serverAddress + location;
-	        };
-
-	        this.error = function () {
-	            throw "Ajax Error";
-	        };
-	        this.beforeSend = function () {};
-	        this.complete = function () {};
-
-	        /**
-	         * Run a AJAX request
-	         * @param {Object} params - jQuery AJAX params
-	         */
-	        this.run = function (params) {
-	            var url = params.url || '';
-	            params.url = this.prepareUrl(url);
-
-	            params = $.extend(this.getDefaultParams(url), params);
-
-	            $.ajax(params);
-	        };
-	    };
-	/*global module*/
-	module.exports = Ajax;
-
-
-/***/ },
-/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Validate = function ($, prompt) {
@@ -2005,7 +1409,7 @@
 
 
 /***/ },
-/* 20 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Mask = function ($) {
@@ -2058,6 +1462,932 @@
 	/*global module*/
 	module.exports = Mask;
 
+
+/***/ },
+/* 18 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function ($) {
+	    'use strict';
+	    var $Injector = __webpack_require__(19),
+	        $Ajax = __webpack_require__(20),
+	        $Server = __webpack_require__(21),
+	        $TemplateProvider = __webpack_require__(22),
+	        $ControllerProvider = __webpack_require__(23),
+	        $UrlResolver = __webpack_require__(24),
+	        $StateProvider = __webpack_require__(25);
+
+	    function Module(deps) {
+	        var instance,
+	            $injector = $Injector(),
+	            configs = [],
+	            runnables = [],
+
+	            onUrlChange;
+
+	        $injector("$injector", function () {
+	            return $injector;
+	        });
+
+	        $injector("$ajax", $Ajax);
+	        $injector("$server", $Server);
+	        $injector("$controllerProvider", $ControllerProvider);
+	        $injector("$templateProvider", $TemplateProvider);
+	        $injector("$urlResolver", $UrlResolver);
+	        $injector("$stateProvider", $StateProvider);
+
+	        function factory(name, constructor) {
+	            if (typeof name !== 'string') {
+	                throw 'invalid service name';
+	            }
+	            if (typeof constructor !== 'function') {
+	                throw 'invalid service constructor';
+	            }
+
+	            $injector(name, constructor);
+
+	            return instance;
+	        }
+
+	        function controller(name, constructor) {
+	            $injector(function ($controllerProvider) {
+	                $controllerProvider.register(name, constructor);
+	            });
+
+	            return instance;
+	        }
+
+	        function state(name, definition) {
+	            $injector(function ($stateProvider) {
+	                $stateProvider.register(name, definition);
+	            });
+
+	            return instance;
+	        }
+
+	        function go(state, params) {
+	            $injector(function ($stateProvider) {
+	                $stateProvider.go(state, params);
+	            });
+
+	            return instance;
+	        }
+
+	        function goToUrl(url) {
+	            $injector(function ($stateProvider) {
+	                $stateProvider.goToUrl(url);
+	            });
+
+	            return instance;
+	        }
+
+	        function isRegisteredState(name) {
+	            var $stateProvider = $injector.getDependency('$stateProvider');
+	            return $stateProvider.isRegisteredState(name);
+	        }
+
+	        function isRegisteredUrl(url) {
+	            var $stateProvider = $injector.getDependency('$stateProvider');
+	            return $stateProvider.isRegisteredUrl(url);
+	        }
+
+	        function config(func) {
+	            configs.push(func);
+	            return instance;
+	        }
+
+	        function run(func) {
+	            runnables.push(func);
+	            return instance;
+	        }
+
+	        function configPhase() {
+	            var i;
+	            for (i = 0; i < configs.length; i += 1) {
+	                $injector(configs[i]);
+	            }
+	        }
+
+	        function runPhase() {
+	            var i;
+	            for (i = 0; i < runnables.length; i += 1) {
+	                $injector(runnables[i]);
+	            }
+	        }
+
+	        onUrlChange = function (url) {
+	            goToUrl(url);
+	        };
+
+	        function start() {
+	            configPhase();
+	            runPhase();
+	        }
+
+	        instance = {
+	            factory: factory,
+	            controller: controller,
+	            state: state,
+	            go: go,
+	            goToUrl: goToUrl,
+	            config: config,
+	            run: run,
+	            isRegisteredState: isRegisteredState,
+	            isRegisteredUrl: isRegisteredUrl,
+	            onUrlChange: onUrlChange,
+	            start: start
+	        };
+
+	        return instance;
+	    }
+
+	    module.exports = Module;
+	}(window.jQuery));
+
+/***/ },
+/* 19 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Scope.js: https://github.com/alinz/scopejs
+	 */
+	/*global module*/
+	/*jslint plusplus:true*/
+	(function () {
+	    'use strict';
+
+	    function $Injector() {
+	        var queues = {},
+	            modules = {},
+
+	            invoke;
+
+	        function task(func) {
+	            setTimeout(func, 0);
+	        }
+
+	        function forEach(arr, func) {
+	            var length = arr ? arr.length : 0,
+	                i;
+	            for (i = 0; i < length; i++) {
+	                func(arr[i], i);
+	            }
+	        }
+
+	        function asyncMap(arr, func, done) {
+	            var results = [],
+	                length = arr.length,
+	                i = 0;
+
+	            if (!length) {
+	                task(function () {
+	                    done(results);
+	                });
+	            } else {
+	                forEach(arr, function (item, index) {
+	                    task(function () {
+	                        func(item, function (result) {
+	                            i++;
+	                            results[index] = result;
+	                            if (i === length) {
+	                                done(results);
+	                            }
+	                        });
+	                    });
+	                });
+	            }
+	        }
+
+	        /**
+	         * Conditions:
+	         * 1: Module has been registered but not loaded
+	         * 2: Module has been registered and loaded
+	         * 3: Module has not been registered
+	         *
+	         * @param name
+	         * @param func
+	         */
+
+	        function queueOrGet(name, func) {
+	            if (!modules[name]) {
+	                if (!invoke.get) {
+	                    throw "Injector.get has not defined";
+	                }
+	                modules[name] = {};
+	                if (!queues[name]) {
+	                    queues[name] = [];
+	                }
+	                queues[name].push(func);
+	                invoke.get(name, function (o) {
+	                    if (o) {
+	                        modules[name] = {
+	                            o: o
+	                        };
+	                    }
+	                    func();
+	                });
+	            } else {
+	                if (modules[name].o !== undefined) {
+	                    func();
+	                } else {
+	                    if (!queues[name]) {
+	                        queues[name] = [];
+	                    }
+	                    queues[name].push(func);
+	                }
+	            }
+	        }
+
+	        function runQueue(name) {
+	            forEach(queues[name], function (func) {
+	                func();
+	            });
+	            delete queues[name];
+	        }
+
+	        function getFuncArgs(func) {
+	            var args = /^function\s*[\w\d$_]*\(([\w\d,_$\s]*)\)/.exec(func.toString())[1];
+	            return args === '' ? [] : args.replace(/\s+/gm, '').split(",");
+	        }
+
+	        /**
+	         * Conditions:
+	         * 1: Anonimous function without invoke
+	         * 2: Anonimous function with scope
+	         * 3: Named module withoud scope
+	         * 4: Named module with scope
+	         */
+	        invoke = function () {
+	            var args = arguments,
+	                info,
+	                target,
+	                obj = {};
+
+	            if (typeof args[0] === 'string') {
+	                obj.n = args[0];
+	                info = args[1];
+	                obj.s = args[2] || null;
+	            } else {
+	                info = args[0];
+	                obj.s = args[1] || null;
+	            }
+
+	            if (typeof info === 'function') {
+	                obj.d = getFuncArgs(info);
+	                obj.c = info;
+	            } else {
+	                obj.c = info.pop();
+	                obj.d = info;
+	            }
+
+	            if (obj.n) {
+	                //We are checking whether module is requested or loaded.
+	                //if target object is available + dependencies, it means that we have duplicates
+	                //if we have only target but not dependencies, it means that module was requested by get call and module
+	                //has been downloaded and now the real module is registering it self.
+	                target = modules[obj.n];
+	                if (target && target.d) {
+	                    return;
+	                }
+	                modules[obj.n] = obj;
+	            }
+
+	            function dependencyResolver(dependency, callback) {
+	                queueOrGet(dependency, function () {
+	                    callback(modules[dependency].o);
+	                });
+	            }
+
+	            function execute(loadedDependencies) {
+	                obj.o = obj.c.apply(obj.s, loadedDependencies);
+	                if (obj.n) {
+	                    runQueue(obj.n);
+	                }
+	            }
+
+	            asyncMap(obj.d, dependencyResolver, execute);
+	        };
+
+	        invoke.clear = function (name) {
+	            if (queues[name]) {
+	                return;
+	            }
+
+	            delete modules[name];
+	        };
+
+	        invoke.getDependency = function (name) {
+	            if (modules[name]) {
+	                return modules[name].o;
+	            }
+	            return null;
+	        };
+
+	        return invoke;
+	    }
+
+	    module.exports = $Injector;
+	}());
+
+/***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function ($) {
+	    'use strict';
+
+	    function $Ajax() {
+	        return $.ajax;
+	    }
+
+	    module.exports = $Ajax;
+	}(window.jQuery));
+
+
+/***/ },
+/* 21 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function () {
+	    'use strict';
+
+	    var helpers = __webpack_require__(4),
+	        extend = helpers.extend;
+
+	    function $Server($ajax) {
+	        var instance,
+	            serverAddress = '',
+	            defaultParams,
+
+	            prepareUrl = function (location) {
+	                return serverAddress + location;
+	            },
+
+	            error = function () {
+	                throw "Server Error";
+	            },
+
+	            beforeSend = function () {},
+
+	            complete = function () {};
+
+	        function setDefaultParams(params) {
+	            defaultParams = params;
+	        }
+
+	        function getDefaultParams() {
+	            return defaultParams;
+	        }
+
+	        function getServerAddress() {
+	            return serverAddress;
+	        }
+
+	        function setServerAddress(address) {
+	            serverAddress = address;
+	        }
+
+	        function run(params) {
+	            var url = params.url || '';
+	            params.url = instance.prepareUrl(url);
+
+	            params = extend({}, defaultParams, params);
+
+	            $ajax(params);
+	        }
+
+	        function get(url, callback) {
+	            var params = extend({}, defaultParams, {
+	                url: instance.prepareUrl(url),
+	                type: 'get',
+	                success: callback
+	            });
+
+	            $ajax(params);
+	        }
+
+	        instance = {
+	            getServerAddress: getServerAddress,
+	            setServerAddress: setServerAddress,
+	            getDefaultParams: getDefaultParams,
+	            setDefaultParams: setDefaultParams,
+	            prepareUrl: prepareUrl,
+	            error: error,
+	            beforeSend: beforeSend,
+	            complete: complete,
+	            request: run,
+	            get: get
+	        };
+
+	        defaultParams = {
+	            dataType: "json",
+	            beforeSend: instance.beforeSend,
+	            complete: instance.complete,
+	            error: instance.error,
+	            cache: false
+	        };
+
+	        return instance;
+	    }
+
+	    module.exports = $Server;
+	}());
+
+/***/ },
+/* 22 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function ($, Ractive) {
+	    'use strict';
+	    var helpers = __webpack_require__(4);
+
+	    function $TemplateProvider() {
+	        var templatePath = '',
+	            templateFormat = '',
+
+	            ajaxCache = true,
+
+	            cache = {},
+	            deferreds = {};
+
+	        function getTemplatePath() {
+	            return templatePath;
+	        }
+
+	        function setTemplatePath(path) {
+	            templatePath = path;
+	        }
+
+	        function getTemplateFormat() {
+	            return templateFormat;
+	        }
+
+	        function setTemplateFormat(format) {
+	            templateFormat = format;
+	        }
+
+	        function formatTemplateUrl(name) {
+	            return templatePath + name + templateFormat;
+	        }
+
+	        /**
+	         * Do the ajax call looking for template
+	         * @param   {string} path - The URI of the template
+	         * @returns {Object} - A deferreds with the ajax result
+	         */
+	        function getTemplate(path) {
+	            if (deferreds[path] === undefined) {
+	                deferreds[path] = $.ajax({
+	                    url: formatTemplateUrl(path),
+	                    dataType: "text",
+	                    cache: ajaxCache,
+	                    success: function (template) {
+	                        cache[path] = template;
+	                    },
+	                    error: function () {
+	                        cache[path] = 'Template não encontrado';
+	                    }
+	                });
+	            }
+	            return deferreds[path];
+	        }
+
+	        /**
+	         * Return a promisse with a Ractive with the template file contents
+	         * @param   {string} path - The URI of the template
+	         * @returns {Object}
+	         */
+	        function loadOne(path) {
+	            return new Ractive.Promise(function (resolve, reject) {
+	                getTemplate(path).done(function () {
+	                    resolve(cache[path]);
+	                });
+	            });
+	        }
+
+	        /**
+	         * Load multiple template files
+	         * @param   {Object} map - A list of templates
+	         * @returns {Object} - A promise with a Ractive with the template files contents
+	         */
+	        function loadMultiple(map) {
+	            return new Ractive.Promise(function (resolve, reject) {
+	                var pendents = 0,
+	                    results = {},
+	                    name,
+
+	                    load = function (path) {
+	                        getTemplate(map[path]).done(function () {
+	                            results[path] = cache[map[path]];
+	                            pendents -= 1;
+	                            if (!pendents) {
+	                                resolve(results);
+	                            }
+	                        });
+	                    };
+
+	                for (name in map) {
+	                    if (map.hasOwnProperty(name)) {
+	                        pendents += 1;
+	                        load(name);
+	                    }
+	                }
+	            });
+	        }
+
+	        /**
+	         * A load interface that can receive a string or a Object
+	         * and wrapp the request for a loadSingle or a loadMultiple template
+	         * @param   {(Object|string)} map - The template URI
+	         * @param   {function} [callback] - Optiona, can be used in 'then' callback of the promisse
+	         * @returns {Object} - Promise with the template
+	         */
+	        function load(map, callback) {
+	            var promise;
+	            if (typeof map === 'string') {
+	                promise = loadOne(map);
+	            } else {
+	                promise = loadMultiple(map);
+	            }
+	            if (typeof callback === 'undefined') {
+	                return promise;
+	            } else {
+	                promise.then(callback);
+	            }
+	        }
+
+	        function corrigeParams(state, template) {
+	            var options = helpers.extend({}, state);
+
+	            options.template = template;
+	            delete options.el;
+	            delete options.controller;
+	            delete options.serverLink;
+	            delete options.templateUrl;
+
+	            return options;
+	        }
+
+	        function extractTemplateParams(state) {
+	            return new Ractive.Promise(function (resolve, reject) {
+	                if (state.templateUrl) {
+	                    load(state.templateUrl).then(function (template) {
+	                        resolve(corrigeParams(state, template));
+	                    });
+	                } else {
+	                    resolve(corrigeParams(state, state.template));
+	                }
+	            });
+	        }
+
+	        function create(options) {
+	            return new Ractive.Promise(function (resolve, reject) {
+	                extractTemplateParams(options).then(function (options) {
+	                    resolve(Ractive.extend(options));
+	                });
+	            });
+	        }
+
+	        return {
+	            create: create,
+	            getTemplatePath: getTemplatePath,
+	            getTemplateFormat: getTemplateFormat,
+	            setTemplatePath: setTemplatePath,
+	            setTemplateFormat: setTemplateFormat
+	        };
+	    }
+
+	    module.exports = $TemplateProvider;
+	}(window.jQuery, window.Ractive));
+
+/***/ },
+/* 23 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function () {
+	    'use strict';
+	    var helpers = __webpack_require__(4),
+	        isFunction = helpers.isFunction,
+	        isArray = helpers.isArray;
+
+	    function $ControllerProvider($injector) {
+	        var instance,
+	            controllers = {};
+
+	        function register(name, constructor) {
+	            controllers[name] = constructor;
+
+	            return instance;
+	        }
+
+	        function resolve(controller, scope) {
+	            if (isFunction(controller) || isArray(controller)) {
+	                $injector(controller, scope);
+	            } else if (controllers[controller]) {
+	                $injector(controllers[controller], scope);
+	            }
+	        }
+
+	        instance = {
+	            register: register,
+	            resolve: resolve
+	        };
+
+	        return instance;
+	    }
+
+	    module.exports = $ControllerProvider;
+	}());
+
+/***/ },
+/* 24 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function () {
+	    'use strict';
+
+	    function $UrlResolver() {
+	        function escapeGroup(group) {
+	            return group.replace(/([=!:$\/()])/g, '\\$1');
+	        }
+
+	        function createUrlObject(path) {
+	            var keys = [],
+	                index = 0,
+	                PATH_REGEXP = new RegExp([
+	                    '(\\\\.)',
+	                    '([\\/.])?(?:\\:(\\w+)(?:\\(((?:\\\\.|[^)])*)\\))?|\\(((?:\\\\.|[^)])*)\\))([+*?])?',
+	                    '([.+*?=^!:${}()[\\]|\\/])'
+	                ].join('|'), 'g');
+
+	            // Alter the path string into a usable regexp.
+	            path = path.replace(PATH_REGEXP, function (match, escaped, prefix, key, capture, group, suffix, escape) {
+	                // Avoiding re-escaping escaped characters.
+	                if (escaped) {
+	                    return escaped;
+	                }
+
+	                // Escape regexp special characters.
+	                if (escape) {
+	                    return '\\' + escape;
+	                }
+
+	                var repeat = suffix === '+' || suffix === '*',
+	                    optional = suffix === '?' || suffix === '*';
+
+	                if (!key) {
+	                    index += 1;
+	                }
+	                keys.push({
+	                    name: key || index,
+	                    delimiter: prefix || '/',
+	                    optional: optional,
+	                    repeat: repeat
+	                });
+
+	                // Escape the prefix character.
+	                prefix = prefix ? '\\' + prefix : '';
+
+	                // Match using the custom capturing group, or fallback to capturing
+	                // everything up to the next slash (or next period if the param was
+	                // prefixed with a period).
+	                capture = escapeGroup(capture || group || '[^' + (prefix || '\\/') + ']+?');
+
+	                // Allow parameters to be repeated more than once.
+	                if (repeat) {
+	                    capture = capture + '(?:' + prefix + capture + ')*';
+	                }
+
+	                // Allow a parameter to be optional.
+	                if (optional) {
+	                    return '(?:' + prefix + '(' + capture + '))?';
+	                }
+
+	                // Basic parameter support.
+	                return prefix + '(' + capture + ')';
+	            });
+
+	            return {
+	                regExp: new RegExp('^' + path + '$'),
+	                keys: keys
+	            };
+	        }
+
+	        function extractParams(urlObject, url) {
+	            var matches = url.match(urlObject.regExp),
+	                matchedObject = {},
+	                matchedKey,
+	                keyIndice,
+	                key;
+
+	            for (keyIndice in urlObject.keys) {
+	                if (urlObject.keys.hasOwnProperty(keyIndice)) {
+	                    key = urlObject.keys[keyIndice];
+	                    matchedKey = parseInt(keyIndice, 10) + 1;
+	                    matchedObject[key.name] = matches[matchedKey];
+	                }
+	            }
+
+	            return matchedObject;
+	        }
+
+	        function replaceUrl(params, url) {
+	            var key;
+
+	            for (key in params) {
+	                if (params.hasOwnProperty(key)) {
+	                    url = url.replace('{' + key + '}', params[key]);
+	                }
+	            }
+	            return url;
+	        }
+
+	        function resolve(urlObject, url) {
+	            if (urlObject.regExp.test(url)) {
+	                var params = extractParams(urlObject, url);
+	                return {
+	                    ulr: replaceUrl(params, url),
+	                    params: params
+	                };
+	            }
+	            return null;
+	        }
+
+	        return {
+	            createUrlObject: createUrlObject,
+	            resolve: resolve,
+	            replaceUrl: replaceUrl
+	        };
+	    }
+
+	    module.exports = $UrlResolver;
+	}());
+
+/***/ },
+/* 25 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function () {
+	    'use strict';
+
+	    var helpers = __webpack_require__(4),
+	        isDefined = helpers.isDefined;
+
+	    function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $urlResolver) {
+	        var instance,
+	            states = {},
+	            currentStateTree = [];
+
+	        function register(name, def) {
+	            if (def.url) {
+	                def.urlObject = $urlResolver.createUrlObject(def.url);
+	            }
+	            if (def.dataUrl) {
+	                def.dataUrlFormat = def.dataUrl;
+	            }
+	            states[name] = def;
+
+	            return instance;
+	        }
+
+	        function updateDataUrl(name, params) {
+	            if (states[name]) {
+	                states[name].dataUrl = $urlResolver.replaceUrl(params, states[name].dataUrlFormat);
+	            }
+	        }
+
+	        function runState(state, params, myTemplate, data) {
+	            $injector.clear('$data');
+	            $injector.clear('$stateParams');
+
+	            $injector('$data', function () {
+	                return data;
+	            });
+	            $injector('$stateParams', function () {
+	                return params;
+	            });
+
+	            $controllerProvider.resolve(state.controller, myTemplate);
+
+	            myTemplate.render(state.el);
+	        }
+
+	        function resolveState(name, params) {
+	            if (!states[name]) {
+	                return;
+	            }
+
+	            var state = states[name],
+	                dataUrl = state.dataUrl,
+	                data = state.data || {},
+	                myTemplate,
+	                completeRequest = false,
+	                completeTemplate = false;
+
+	            if (dataUrl) {
+	                $server.get(dataUrl, function (response) {
+	                    data = response;
+
+	                    completeRequest = true;
+	                    if (completeTemplate) {
+	                        runState(state, params, myTemplate, data);
+	                    }
+	                });
+	            } else {
+	                completeRequest = true;
+	            }
+	            $templateProvider.create(state).then(function (Template) {
+	                myTemplate = new Template();
+
+	                completeTemplate = true;
+	                if (completeRequest) {
+	                    runState(state, params, myTemplate, data);
+	                }
+	            });
+	        }
+
+	        function reload(params) {
+	            var i;
+	            for (i = 0; i < currentStateTree.length; i += 1) {
+	                resolveState(states[currentStateTree[i]], params);
+	            }
+
+	            return instance;
+	        }
+
+	        function go(name, params) {
+	            if (!states[name]) {
+	                return;
+	            }
+
+	            var subStates = name.split('.'),
+	                diferentTree = false,
+	                i;
+
+	            for (i = 0; i < subStates.length; i += 1) {
+	                if (subStates[i] !== currentStateTree[i] || diferentTree) {
+	                    diferentTree = true;
+	                    resolveState(subStates[i], params);
+	                }
+	            }
+	            currentStateTree = subStates;
+
+	            return instance;
+	        }
+
+	        function findByUrl(url) {
+	            var key, state, urlMatch;
+
+	            for (key in states) {
+	                if (states.hasOwnProperty(key) && states[key].url) {
+	                    urlMatch = $urlResolver.resolve(states[key].urlObject, url);
+	                    if (urlMatch) {
+	                        urlMatch.stateName = key;
+	                        return urlMatch;
+	                    }
+	                }
+	            }
+	            return null;
+	        }
+
+	        function goToUrl(url) {
+	            var found = findByUrl(url);
+
+	            if (found) {
+	                updateDataUrl(found.stateName, found.params);
+	                go(found.stateName, found.params);
+	            }
+	        }
+
+	        function isRegisteredState(name) {
+	            return isDefined(states[name]);
+	        }
+
+	        function isRegisteredUrl(url) {
+	            return findByUrl(url) !== null;
+	        }
+
+	        instance = {
+	            register: register,
+	            go: go,
+	            reload: reload,
+	            isRegisteredState: isRegisteredState,
+	            isRegisteredUrl: isRegisteredUrl,
+	            goToUrl: goToUrl
+	        };
+
+	        return instance;
+	    }
+
+	    module.exports = $StateProvider;
+	}());
 
 /***/ }
 /******/ ]);

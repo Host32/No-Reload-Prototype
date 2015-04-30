@@ -1,7 +1,7 @@
 /*global module, require*/
 (function () {
     'use strict';
-    var helpers = require('./helpers'),
+    var helpers = require('../helpers'),
         isFunction = helpers.isFunction,
         isArray = helpers.isArray;
 

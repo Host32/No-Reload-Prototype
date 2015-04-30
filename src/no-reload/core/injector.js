@@ -61,7 +61,7 @@
         function queueOrGet(name, func) {
             if (!modules[name]) {
                 if (!invoke.get) {
-                    throw "Err1";
+                    throw "Injector.get has not defined";
                 }
                 modules[name] = {};
                 if (!queues[name]) {
@@ -96,7 +96,7 @@
         }
 
         function getFuncArgs(func) {
-            var args = /^function\s*[\w\d]*\(([\w\d,_$\s]*)\)/.exec(func.toString())[1];
+            var args = /^function\s*[\w\d$_]*\(([\w\d,_$\s]*)\)/.exec(func.toString())[1];
             return args === '' ? [] : args.replace(/\s+/gm, '').split(",");
         }
 
@@ -116,10 +116,10 @@
             if (typeof args[0] === 'string') {
                 obj.n = args[0];
                 info = args[1];
-                obj.s = args[2] || {};
+                obj.s = args[2] || null;
             } else {
                 info = args[0];
-                obj.s = args[1] || {};
+                obj.s = args[1] || null;
             }
 
             if (typeof info === 'function') {
@@ -137,29 +137,40 @@
                 //has been downloaded and now the real module is registering it self.
                 target = modules[obj.n];
                 if (target && target.d) {
-                    throw "Err2: " + obj.n;
+                    return;
                 }
                 modules[obj.n] = obj;
             }
 
-            asyncMap(obj.d, function (dependency, func) {
+            function dependencyResolver(dependency, callback) {
                 queueOrGet(dependency, function () {
-                    func(modules[dependency].o);
+                    callback(modules[dependency].o);
                 });
-            }, function (loadedDependencies) {
+            }
+
+            function execute(loadedDependencies) {
                 obj.o = obj.c.apply(obj.s, loadedDependencies);
                 if (obj.n) {
                     runQueue(obj.n);
                 }
-            });
+            }
+
+            asyncMap(obj.d, dependencyResolver, execute);
         };
 
         invoke.clear = function (name) {
             if (queues[name]) {
-                throw "Err3: " + name;
+                return;
             }
 
             delete modules[name];
+        };
+
+        invoke.getDependency = function (name) {
+            if (modules[name]) {
+                return modules[name].o;
+            }
+            return null;
         };
 
         return invoke;

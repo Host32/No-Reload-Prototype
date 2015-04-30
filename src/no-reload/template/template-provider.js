@@ -1,7 +1,7 @@
 /*global module, require*/
 (function ($, Ractive) {
     'use strict';
-    var helpers = require('./helpers');
+    var helpers = require('../helpers');
 
     function $TemplateProvider() {
         var templatePath = '',

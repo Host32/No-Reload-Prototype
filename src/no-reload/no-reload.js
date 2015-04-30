@@ -2,20 +2,10 @@
 (function () {
     'use strict';
 
-    var appProvider = require('./core/app'),
-        helpers = require('./core/helpers'),
+    var appProvider = require('./core/app-provider'),
+        helpers = require('./helpers');
 
-        apps = {};
-
-
-    function app(name) {
-        if (!apps[name]) {
-            apps[name] = appProvider.create();
-        }
-        return apps[name];
-    }
-
-    module.exports = helpers.extend({
-        app: app
+    module.exports = helpers.extend({}, {
+        app: appProvider
     }, helpers);
 }());
