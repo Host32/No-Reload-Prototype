@@ -2423,7 +2423,8 @@
 	            isRegisteredState: isRegisteredState,
 	            isRegisteredUrl: isRegisteredUrl,
 	            goToUrl: goToUrl,
-	            clearCurrentStateTree: clearCurrentStateTree
+	            clearCurrentStateTree: clearCurrentStateTree,
+	            currentStateTree: currentStateTree
 	        };
 
 	        return instance;
