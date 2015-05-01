@@ -174,6 +174,10 @@
             currentStateTree = [];
         }
 
+        function setCurrentStateTree(tree) {
+            currentStateTree = tree;
+        }
+
         instance = {
             register: register,
             go: go,
@@ -182,7 +186,7 @@
             isRegisteredUrl: isRegisteredUrl,
             goToUrl: goToUrl,
             clearCurrentStateTree: clearCurrentStateTree,
-            currentStateTree: currentStateTree
+            setCurrentStateTree: setCurrentStateTree
         };
 
         return instance;
