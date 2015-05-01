@@ -1695,7 +1695,7 @@
 
 	        function queueOrGet(name, func) {
 	            if (!modules[name]) {
-	                if (!invoke.get) {
+	                if (!invoke.hasOwnProperty('get')) {
 	                    throw "Injector.get has not defined";
 	                }
 	                modules[name] = {};
@@ -1813,7 +1813,6 @@
 
 	    module.exports = $Injector;
 	}());
-
 
 /***/ },
 /* 20 */
@@ -2436,6 +2435,7 @@
 
 	    module.exports = $StateProvider;
 	}());
+
 
 /***/ },
 /* 26 */

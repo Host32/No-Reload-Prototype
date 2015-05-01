@@ -60,7 +60,7 @@
 
         function queueOrGet(name, func) {
             if (!modules[name]) {
-                if (!invoke.get) {
+                if (!invoke.hasOwnProperty('get')) {
                     throw "Injector.get has not defined";
                 }
                 modules[name] = {};
