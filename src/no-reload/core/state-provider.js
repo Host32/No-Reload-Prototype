@@ -8,7 +8,11 @@
     function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $urlResolver) {
         var instance,
             states = {},
-            currentStateTree = [];
+            currentStateTree = [],
+            loadingState = false,
+            stateQueue = [],
+
+            resolveState;
 
         function register(name, def) {
             if (def.url) {
@@ -28,6 +32,14 @@
             }
         }
 
+        function resolveQueue() {
+            loadingState = false;
+            if (stateQueue.length) {
+                var state = stateQueue.shift();
+                resolveState(state.name, state.params);
+            }
+        }
+
         function runState(state, params, myTemplate, data) {
             $injector.clear('$data');
             $injector.clear('$stateParams');
@@ -42,10 +54,23 @@
             $controllerProvider.resolve(state.controller, myTemplate);
 
             myTemplate.render(state.el);
+            resolveQueue();
         }
 
-        function resolveState(name, params) {
+        function putOnQueue(name, params) {
+            stateQueue.push({
+                name: name,
+                params: params
+            });
+        }
+
+        resolveState = function (name, params) {
             if (!states[name]) {
+                return;
+            }
+
+            if (loadingState) {
+                putOnQueue(name, params);
                 return;
             }
 
@@ -56,6 +81,7 @@
                 completeRequest = false,
                 completeTemplate = false;
 
+            loadingState = true;
             if (dataUrl) {
                 $server.get(dataUrl, function (response) {
                     data = response;
@@ -76,7 +102,7 @@
                     runState(state, params, myTemplate, data);
                 }
             });
-        }
+        };
 
         function reload(params) {
             var i;
