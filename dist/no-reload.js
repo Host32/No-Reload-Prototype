@@ -2235,6 +2235,7 @@
 	    module.exports = $UrlResolver;
 	}());
 
+
 /***/ },
 /* 25 */
 /***/ function(module, exports, __webpack_require__) {
@@ -2250,6 +2251,7 @@
 	        var instance,
 	            states = {},
 	            currentStateTree = [],
+	            lastUrl = '',
 	            loadingState = false,
 	            stateQueue = [],
 
@@ -2367,7 +2369,7 @@
 	            for (i = 0; i < subStates.length; i += 1) {
 	                fullStateName += subStates[i];
 
-	                if (subStates[i] !== currentStateTree[i] || diferentTree) {
+	                if (subStates[i] !== currentStateTree[i] || diferentTree || i === (subStates.length - 1)) {
 	                    diferentTree = true;
 	                    resolveState(fullStateName, params);
 	                }
@@ -2400,6 +2402,7 @@
 	            if (found) {
 	                updateDataUrl(found.stateName, found.params);
 	                go(found.stateName, found.params);
+	                lastUrl = url;
 	            }
 	        }
 
@@ -2435,7 +2438,6 @@
 
 	    module.exports = $StateProvider;
 	}());
-
 
 /***/ },
 /* 26 */
