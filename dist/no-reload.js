@@ -322,13 +322,13 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($) {
+	(function () {
 	    'use strict';
 	    var helpers = __webpack_require__(4),
 	        moduleProvider = __webpack_require__(15);
 
 	    module.exports = moduleProvider;
-	}(window.jQuery));
+	}());
 
 
 /***/ },
@@ -1195,7 +1195,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($) {
+	(function () {
 	    'use strict';
 	    var moduleFactory = __webpack_require__(18),
 
@@ -1209,7 +1209,7 @@
 	        };
 
 	    module.exports = moduleProvider;
-	}(window.jQuery));
+	}());
 
 
 /***/ },
@@ -1473,7 +1473,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($) {
+	(function () {
 	    'use strict';
 	    var $Injector = __webpack_require__(19),
 	        $Ajax = __webpack_require__(20),
@@ -1626,7 +1626,7 @@
 	    }
 
 	    module.exports = Module;
-	}(window.jQuery));
+	}());
 
 
 /***/ },
@@ -1846,6 +1846,7 @@
 	        var instance,
 	            serverAddress = '',
 	            defaultParams,
+	            interceptors = [],
 
 	            prepareUrl = function (location) {
 	                return serverAddress + location;
@@ -1875,23 +1876,40 @@
 	            serverAddress = address;
 	        }
 
+	        function registerInterceptor(interceptor) {
+	            interceptors.push(interceptor);
+	        }
+
+	        function createSuccessFunc(userSuccessFunc) {
+	            return function (response) {
+	                var i;
+	                for (i = 0; i < interceptors.length; i += 1) {
+	                    interceptors[i](response);
+	                }
+	                if (userSuccessFunc) {
+	                    userSuccessFunc(response);
+	                }
+	            };
+	        }
+
 	        function run(params) {
 	            var url = params.url || '';
 	            params.url = instance.prepareUrl(url);
+	            params.success = createSuccessFunc(params.success);
 
 	            params = extend({}, defaultParams, params);
 
-	            $ajax(params);
+	            return $ajax(params);
 	        }
 
 	        function get(url, callback) {
 	            var params = extend({}, defaultParams, {
 	                url: instance.prepareUrl(url),
 	                type: 'get',
-	                success: callback
+	                success: createSuccessFunc(callback)
 	            });
 
-	            $ajax(params);
+	            return $ajax(params);
 	        }
 
 	        instance = {
@@ -1904,7 +1922,8 @@
 	            beforeSend: beforeSend,
 	            complete: complete,
 	            request: run,
-	            get: get
+	            get: get,
+	            registerInterceptor: registerInterceptor
 	        };
 
 	        defaultParams = {
@@ -1921,13 +1940,12 @@
 	    module.exports = $Server;
 	}());
 
-
 /***/ },
 /* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($, Ractive) {
+	(function (Ractive) {
 	    'use strict';
 	    var helpers = __webpack_require__(4),
 	        extend = helpers.extend,
@@ -1936,9 +1954,9 @@
 	        partialProvider = __webpack_require__(27),
 	        componentProvider = __webpack_require__(28);
 
-	    function $TemplateProvider() {
+	    function $TemplateProvider($ajax) {
 	        var instance,
-	            loader = loaderProvider(),
+	            loader = loaderProvider($ajax),
 	            partialManager = partialProvider(loader),
 	            componentManager = componentProvider(),
 	            components = {},
@@ -2047,7 +2065,8 @@
 	    }
 
 	    module.exports = $TemplateProvider;
-	}(window.jQuery, window.Ractive));
+	}(window.Ractive));
+
 
 /***/ },
 /* 23 */
@@ -2387,10 +2406,10 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($, Ractive) {
+	(function (Ractive) {
 	    'use strict';
 
-	    function LoaderProvider() {
+	    function LoaderProvider($ajax) {
 	        var templatePath = '',
 	            templateFormat = '',
 	            cache = {},
@@ -2425,7 +2444,7 @@
 	         */
 	        function getTemplate(path) {
 	            if (deferreds[path] === undefined) {
-	                deferreds[path] = $.ajax({
+	                deferreds[path] = $ajax({
 	                    url: formatTemplateUrl(path),
 	                    dataType: "text",
 	                    cache: ajaxCache,
@@ -2515,14 +2534,15 @@
 	    }
 
 	    module.exports = LoaderProvider;
-	}(window.jQuery, window.Ractive));
+	}(window.Ractive));
+
 
 /***/ },
 /* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($, Ractive) {
+	(function (Ractive) {
 	    'use strict';
 
 	    function PartialProvider(loaderRef) {
@@ -2614,14 +2634,15 @@
 	    }
 
 	    module.exports = PartialProvider;
-	}(window.jQuery, window.Ractive));
+	}(window.Ractive));
+
 
 /***/ },
 /* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($, Ractive) {
+	(function (Ractive) {
 	    'use strict';
 
 	    function ComponentProvider() {
@@ -2704,7 +2725,8 @@
 	    }
 
 	    module.exports = ComponentProvider;
-	}(window.jQuery, window.Ractive));
+	}(window.Ractive));
+
 
 /***/ }
 /******/ ]);

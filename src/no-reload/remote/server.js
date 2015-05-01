@@ -9,6 +9,7 @@
         var instance,
             serverAddress = '',
             defaultParams,
+            interceptors = [],
 
             prepareUrl = function (location) {
                 return serverAddress + location;
@@ -38,23 +39,40 @@
             serverAddress = address;
         }
 
+        function registerInterceptor(interceptor) {
+            interceptors.push(interceptor);
+        }
+
+        function createSuccessFunc(userSuccessFunc) {
+            return function (response) {
+                var i;
+                for (i = 0; i < interceptors.length; i += 1) {
+                    interceptors[i](response);
+                }
+                if (userSuccessFunc) {
+                    userSuccessFunc(response);
+                }
+            };
+        }
+
         function run(params) {
             var url = params.url || '';
             params.url = instance.prepareUrl(url);
+            params.success = createSuccessFunc(params.success);
 
             params = extend({}, defaultParams, params);
 
-            $ajax(params);
+            return $ajax(params);
         }
 
         function get(url, callback) {
             var params = extend({}, defaultParams, {
                 url: instance.prepareUrl(url),
                 type: 'get',
-                success: callback
+                success: createSuccessFunc(callback)
             });
 
-            $ajax(params);
+            return $ajax(params);
         }
 
         instance = {
@@ -67,7 +85,8 @@
             beforeSend: beforeSend,
             complete: complete,
             request: run,
-            get: get
+            get: get,
+            registerInterceptor: registerInterceptor
         };
 
         defaultParams = {
