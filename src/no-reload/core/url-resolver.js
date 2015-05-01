@@ -102,7 +102,7 @@
             if (urlObject.regExp.test(url)) {
                 var params = extractParams(urlObject, url);
                 return {
-                    ulr: replaceUrl(params, url),
+                    url: replaceUrl(params, url),
                     params: params
                 };
             }

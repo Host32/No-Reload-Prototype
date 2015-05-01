@@ -1814,6 +1814,7 @@
 	    module.exports = $Injector;
 	}());
 
+
 /***/ },
 /* 20 */
 /***/ function(module, exports, __webpack_require__) {
@@ -2217,7 +2218,7 @@
 	            if (urlObject.regExp.test(url)) {
 	                var params = extractParams(urlObject, url);
 	                return {
-	                    ulr: replaceUrl(params, url),
+	                    url: replaceUrl(params, url),
 	                    params: params
 	                };
 	            }
@@ -2233,7 +2234,6 @@
 
 	    module.exports = $UrlResolver;
 	}());
-
 
 /***/ },
 /* 25 */
