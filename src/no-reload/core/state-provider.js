@@ -170,13 +170,18 @@
             return findByUrl(url) !== null;
         }
 
+        function clearCurrentStateTree() {
+            currentStateTree = [];
+        }
+
         instance = {
             register: register,
             go: go,
             reload: reload,
             isRegisteredState: isRegisteredState,
             isRegisteredUrl: isRegisteredUrl,
-            goToUrl: goToUrl
+            goToUrl: goToUrl,
+            clearCurrentStateTree: clearCurrentStateTree
         };
 
         return instance;
