@@ -9,19 +9,24 @@
         var instance,
             serverAddress = '',
             defaultParams,
-            interceptors = [],
+            interceptors = {
+                beforeSend: [],
+                error: [],
+                success: [],
+                complete: []
+            },
 
             prepareUrl = function (location) {
                 return serverAddress + location;
-            },
+            };
 
-            error = function () {
-                throw "Server Error";
-            },
+        function error() {
+            throw "Server Error";
+        }
 
-            beforeSend = function () {},
+        function beforeSend() {}
 
-            complete = function () {};
+        function complete() {}
 
         function setDefaultParams(params) {
             defaultParams = params;
@@ -39,28 +44,39 @@
             serverAddress = address;
         }
 
-        function registerInterceptor(interceptor) {
-            interceptors.push(interceptor);
+        function registerInterceptor(phase, interceptor) {
+            phase = phase || 'success';
+            interceptors[phase].push(interceptor);
         }
 
-        function createSuccessFunc(userSuccessFunc) {
+        function createInterceptFunc(userFunc, phase) {
             return function (response) {
                 var i;
-                for (i = 0; i < interceptors.length; i += 1) {
-                    interceptors[i](response);
+                for (i = 0; i < interceptors[phase].length; i += 1) {
+                    interceptors[phase][i](response);
                 }
-                if (userSuccessFunc) {
-                    userSuccessFunc(response);
+                if (userFunc) {
+                    userFunc(response);
                 }
             };
+        }
+
+        function createInterceptors(params) {
+            params.beforeSend = createInterceptFunc(params.beforeSend, 'beforeSend');
+            params.error = createInterceptFunc(params.error, 'error');
+            params.success = createInterceptFunc(params.success, 'success');
+            params.complete = createInterceptFunc(params.complete, 'complete');
+
+            return params;
         }
 
         function run(params) {
             var url = params.url || '';
             params.url = instance.prepareUrl(url);
-            params.success = createSuccessFunc(params.success);
 
             params = extend({}, defaultParams, params);
+
+            params = createInterceptors(params);
 
             return $ajax(params);
         }
@@ -69,8 +85,10 @@
             var params = extend({}, defaultParams, {
                 url: instance.prepareUrl(url),
                 type: 'get',
-                success: createSuccessFunc(callback)
+                success: callback
             });
+
+            params = createInterceptors(params);
 
             return $ajax(params);
         }
@@ -81,9 +99,6 @@
             getDefaultParams: getDefaultParams,
             setDefaultParams: setDefaultParams,
             prepareUrl: prepareUrl,
-            error: error,
-            beforeSend: beforeSend,
-            complete: complete,
             request: run,
             get: get,
             registerInterceptor: registerInterceptor
@@ -91,9 +106,6 @@
 
         defaultParams = {
             dataType: "json",
-            beforeSend: instance.beforeSend,
-            complete: instance.complete,
-            error: instance.error,
             cache: false
         };
 
