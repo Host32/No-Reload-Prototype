@@ -1477,29 +1477,36 @@
 	    'use strict';
 	    var $Injector = __webpack_require__(19),
 	        $Ajax = __webpack_require__(20),
-	        $Server = __webpack_require__(21),
-	        $TemplateProvider = __webpack_require__(22),
-	        $ControllerProvider = __webpack_require__(23),
-	        $UrlResolver = __webpack_require__(24),
-	        $StateProvider = __webpack_require__(25);
+	        $ScriptLoader = __webpack_require__(21),
+	        $Server = __webpack_require__(22),
+	        $TemplateProvider = __webpack_require__(23),
+	        $ControllerProvider = __webpack_require__(24),
+	        $RouteResolver = __webpack_require__(25),
+	        $StateProvider = __webpack_require__(26);
 
 	    function Module(deps) {
 	        var instance,
 	            $injector = $Injector(),
+	            $scriptLoader = $ScriptLoader(),
 	            configs = [],
 	            runnables = [],
 
 	            onUrlChange;
 
+	        $injector.get = $scriptLoader.load;
+
 	        $injector("$injector", function () {
 	            return $injector;
+	        });
+	        $injector("$scriptLoader", function () {
+	            return $scriptLoader;
 	        });
 
 	        $injector("$ajax", $Ajax);
 	        $injector("$server", $Server);
 	        $injector("$controllerProvider", $ControllerProvider);
 	        $injector("$templateProvider", $TemplateProvider);
-	        $injector("$urlResolver", $UrlResolver);
+	        $injector("$routeResolver", $RouteResolver);
 	        $injector("$stateProvider", $StateProvider);
 
 	        function factory(name, constructor) {
@@ -1547,17 +1554,29 @@
 	            return instance;
 	        }
 
-	        function go(state, params) {
+	        function route(url, stateName, statePath) {
+	            $injector(function ($routeResolver) {
+	                $routeResolver.register(url, stateName, statePath);
+	            });
+
+	            return instance;
+	        }
+
+	        function go(state, params, stateDepsPaths) {
 	            $injector(function ($stateProvider) {
-	                $stateProvider.go(state, params);
+	                $stateProvider.go(state, params, stateDepsPaths);
 	            });
 
 	            return instance;
 	        }
 
 	        function goToUrl(url) {
-	            $injector(function ($stateProvider) {
-	                $stateProvider.goToUrl(url);
+	            $injector(function ($stateProvider, $routeResolver) {
+	                var urlObj = $routeResolver.resolve(url);
+
+	                if (urlObj) {
+	                    $stateProvider.go(urlObj.stateName, urlObj.params, urlObj.stateDepsPaths);
+	                }
 	            });
 
 	            return instance;
@@ -1610,6 +1629,7 @@
 	            factory: factory,
 	            controller: controller,
 	            state: state,
+	            route: route,
 	            component: component,
 	            partial: partial,
 	            go: go,
@@ -1627,7 +1647,6 @@
 
 	    module.exports = Module;
 	}());
-
 
 /***/ },
 /* 19 */
@@ -1709,7 +1728,6 @@
 	                            o: o
 	                        };
 	                    }
-	                    func();
 	                });
 	            } else {
 	                if (modules[name].o !== undefined) {
@@ -1814,7 +1832,6 @@
 	    module.exports = $Injector;
 	}());
 
-
 /***/ },
 /* 20 */
 /***/ function(module, exports, __webpack_require__) {
@@ -1833,6 +1850,43 @@
 
 /***/ },
 /* 21 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
+	(function ($) {
+	    'use strict';
+
+	    function $ScriptLoader() {
+	        var defaultPath = '';
+
+	        function getDefaultPath() {
+	            return defaultPath;
+	        }
+
+	        function setDefaultPath(path) {
+	            defaultPath = path;
+	        }
+
+	        function formatPath(path) {
+	            return defaultPath + path;
+	        }
+
+	        function load(path) {
+	            $.getScript(formatPath(path));
+	        }
+
+	        return {
+	            getDefaultPath: getDefaultPath,
+	            setDefaultPath: setDefaultPath,
+	            load: load
+	        };
+	    }
+
+	    module.exports = $ScriptLoader;
+	}(window.jQuery));
+
+/***/ },
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
@@ -1942,7 +1996,7 @@
 
 
 /***/ },
-/* 22 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
@@ -1951,13 +2005,13 @@
 	    var helpers = __webpack_require__(4),
 	        extend = helpers.extend,
 	        isString = helpers.isString,
-	        loaderProvider = __webpack_require__(26),
-	        partialProvider = __webpack_require__(27),
-	        componentProvider = __webpack_require__(28);
+	        templateLoaderProvider = __webpack_require__(27),
+	        partialProvider = __webpack_require__(28),
+	        componentProvider = __webpack_require__(29);
 
 	    function $TemplateProvider($ajax) {
 	        var instance,
-	            loader = loaderProvider($ajax),
+	            loader = templateLoaderProvider($ajax),
 	            partialManager = partialProvider(loader),
 	            componentManager = componentProvider(),
 	            components = {},
@@ -1985,7 +2039,7 @@
 	                    doneWithPartials = true,
 	                    doneWithComponents = true;
 
-	                options.template = template;
+	                options.template = template || '';
 	                delete options.el;
 	                delete options.controller;
 	                delete options.serverLink;
@@ -2068,9 +2122,8 @@
 	    module.exports = $TemplateProvider;
 	}(window.Ractive));
 
-
 /***/ },
-/* 23 */
+/* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
@@ -2080,23 +2133,45 @@
 	        isFunction = helpers.isFunction,
 	        isArray = helpers.isArray;
 
-	    function $ControllerProvider($injector) {
+	    function $ControllerProvider($injector, $scriptLoader) {
 	        var instance,
-	            controllers = {};
+	            controllers = {},
+	            resolve,
+
+	            registerQueue = [];
+
+	        function resolveRegisterQueue() {
+	            if (registerQueue.length) {
+	                var controller = registerQueue.shift();
+	                resolve(controller.name, controller.scope);
+	            }
+	        }
 
 	        function register(name, constructor) {
 	            controllers[name] = constructor;
 
+	            resolveRegisterQueue();
+
 	            return instance;
 	        }
 
-	        function resolve(controller, scope) {
+	        function putOnRegisterQueue(name, scope) {
+	            registerQueue.push({
+	                name: name,
+	                scope: scope
+	            });
+	        }
+
+	        resolve = function (controller, scope, path) {
 	            if (isFunction(controller) || isArray(controller)) {
 	                $injector(controller, scope);
 	            } else if (controllers[controller]) {
 	                $injector(controllers[controller], scope);
+	            } else if (path) {
+	                $scriptLoader.load(path);
+	                putOnRegisterQueue(controller, scope);
 	            }
-	        }
+	        };
 
 	        instance = {
 	            register: register,
@@ -2109,21 +2184,22 @@
 	    module.exports = $ControllerProvider;
 	}());
 
-
 /***/ },
-/* 24 */
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
 	(function () {
 	    'use strict';
 
-	    function $UrlResolver() {
+	    function $RouteResolver() {
+	        var registered = {};
+
 	        function escapeGroup(group) {
 	            return group.replace(/([=!:$\/()])/g, '\\$1');
 	        }
 
-	        function createUrlObject(path) {
+	        function pathToRegexp(path) {
 	            var keys = [],
 	                index = 0,
 	                PATH_REGEXP = new RegExp([
@@ -2203,41 +2279,45 @@
 	            return matchedObject;
 	        }
 
-	        function replaceUrl(params, url) {
-	            var key;
+	        function resolve(url) {
+	            var key, params, urlObject;
 
-	            for (key in params) {
-	                if (params.hasOwnProperty(key)) {
-	                    url = url.replace('{' + key + '}', params[key]);
+	            for (key in registered) {
+	                if (registered.hasOwnProperty(key)) {
+	                    urlObject = registered[key];
+
+	                    if (urlObject.regExp.test(url)) {
+	                        params = extractParams(urlObject, url);
+	                        urlObject.params = params;
+	                        return urlObject;
+	                    }
 	                }
-	            }
-	            return url;
-	        }
-
-	        function resolve(urlObject, url) {
-	            if (urlObject.regExp.test(url)) {
-	                var params = extractParams(urlObject, url);
-	                return {
-	                    url: replaceUrl(params, url),
-	                    params: params
-	                };
 	            }
 	            return null;
 	        }
 
+	        function register(url, stateName, stateDepsPaths) {
+	            var reg = pathToRegexp(url);
+	            registered[url] = {
+	                url: url,
+	                stateName: stateName,
+	                stateDepsPaths: stateDepsPaths,
+	                regExp: reg.regExp,
+	                keys: reg.keys
+	            };
+	        }
+
 	        return {
-	            createUrlObject: createUrlObject,
-	            resolve: resolve,
-	            replaceUrl: replaceUrl
+	            register: register,
+	            resolve: resolve
 	        };
 	    }
 
-	    module.exports = $UrlResolver;
+	    module.exports = $RouteResolver;
 	}());
 
-
 /***/ },
-/* 25 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
@@ -2247,31 +2327,45 @@
 	    var helpers = __webpack_require__(4),
 	        isDefined = helpers.isDefined;
 
-	    function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $urlResolver) {
+	    function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $scriptLoader) {
 	        var instance,
 	            states = {},
 	            currentStateTree = [],
 	            lastUrl = '',
 	            loadingState = false,
 	            stateQueue = [],
+	            stateRegisterQueue = [],
 
 	            resolveState;
 
-	        function register(name, def) {
-	            if (def.url) {
-	                def.urlObject = $urlResolver.createUrlObject(def.url);
+	        function resolveRegisterQueue() {
+	            loadingState = false;
+	            if (stateRegisterQueue.length) {
+	                var state = stateRegisterQueue.shift();
+	                resolveState(state.name, state.params);
 	            }
+	        }
+
+	        function register(name, def) {
 	            if (def.dataUrl) {
 	                def.dataUrlFormat = def.dataUrl;
 	            }
 	            states[name] = def;
+
+	            resolveRegisterQueue();
 
 	            return instance;
 	        }
 
 	        function updateDataUrl(name, params) {
 	            if (states[name]) {
-	                states[name].dataUrl = $urlResolver.replaceUrl(params, states[name].dataUrlFormat);
+	                var key;
+	                states[name].dataUrl = states[name].dataUrlFormat;
+	                for (key in params) {
+	                    if (params.hasOwnProperty(key)) {
+	                        states[name].dataUrl = states[name].dataUrl.replace(':' + key, params[key]);
+	                    }
+	                }
 	            }
 	        }
 
@@ -2279,7 +2373,7 @@
 	            loadingState = false;
 	            if (stateQueue.length) {
 	                var state = stateQueue.shift();
-	                resolveState(state.name, state.params);
+	                resolveState(state.name, state.params, state.path);
 	            }
 	        }
 
@@ -2294,26 +2388,39 @@
 	                return params;
 	            });
 
-	            $controllerProvider.resolve(state.controller, myTemplate);
+	            $controllerProvider.resolve(state.controller, myTemplate, state.controllerPath);
 
 	            myTemplate.render(state.el);
 	            resolveQueue();
 	        }
 
-	        function putOnQueue(name, params) {
+	        function putOnQueue(name, params, path) {
 	            stateQueue.push({
+	                name: name,
+	                params: params,
+	                path: path
+	            });
+	        }
+
+	        function putOnRegisterQueue(name, params) {
+	            stateRegisterQueue.push({
 	                name: name,
 	                params: params
 	            });
 	        }
 
-	        resolveState = function (name, params) {
-	            if (!states[name]) {
+	        resolveState = function (name, params, statePath) {
+	            if (!states[name] && !statePath) {
+	                return;
+	            } else if (statePath) {
+	                loadingState = true;
+	                $scriptLoader.load(statePath);
+	                putOnRegisterQueue(name, params);
 	                return;
 	            }
 
 	            if (loadingState) {
-	                putOnQueue(name, params);
+	                putOnQueue(name, params, statePath);
 	                return;
 	            }
 
@@ -2337,6 +2444,7 @@
 	            } else {
 	                completeRequest = true;
 	            }
+
 	            $templateProvider.create(state).then(function (Template) {
 	                myTemplate = new Template();
 
@@ -2356,14 +2464,11 @@
 	            return instance;
 	        }
 
-	        function go(name, params) {
-	            if (!states[name]) {
-	                return;
-	            }
-
+	        function go(name, params, stateDepsPaths) {
 	            var subStates = name.split('.'),
 	                diferentTree = false,
 	                fullStateName = '',
+	                statePath,
 	                i;
 
 	            for (i = 0; i < subStates.length; i += 1) {
@@ -2371,7 +2476,8 @@
 
 	                if (subStates[i] !== currentStateTree[i] || diferentTree || i === (subStates.length - 1)) {
 	                    diferentTree = true;
-	                    resolveState(fullStateName, params);
+	                    statePath = stateDepsPaths ? stateDepsPaths[i] : null;
+	                    resolveState(fullStateName, params, statePath);
 	                }
 
 	                fullStateName += '.';
@@ -2381,37 +2487,9 @@
 	            return instance;
 	        }
 
-	        function findByUrl(url) {
-	            var key, state, urlMatch;
-
-	            for (key in states) {
-	                if (states.hasOwnProperty(key) && states[key].url) {
-	                    urlMatch = $urlResolver.resolve(states[key].urlObject, url);
-	                    if (urlMatch) {
-	                        urlMatch.stateName = key;
-	                        return urlMatch;
-	                    }
-	                }
-	            }
-	            return null;
-	        }
-
-	        function goToUrl(url) {
-	            var found = findByUrl(url);
-
-	            if (found) {
-	                updateDataUrl(found.stateName, found.params);
-	                go(found.stateName, found.params);
-	                lastUrl = url;
-	            }
-	        }
 
 	        function isRegisteredState(name) {
 	            return isDefined(states[name]);
-	        }
-
-	        function isRegisteredUrl(url) {
-	            return findByUrl(url) !== null;
 	        }
 
 	        function clearCurrentStateTree() {
@@ -2427,8 +2505,6 @@
 	            go: go,
 	            reload: reload,
 	            isRegisteredState: isRegisteredState,
-	            isRegisteredUrl: isRegisteredUrl,
-	            goToUrl: goToUrl,
 	            clearCurrentStateTree: clearCurrentStateTree,
 	            setCurrentStateTree: setCurrentStateTree
 	        };
@@ -2440,14 +2516,14 @@
 	}());
 
 /***/ },
-/* 26 */
+/* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
 	(function (Ractive) {
 	    'use strict';
 
-	    function LoaderProvider($ajax) {
+	    function TemplateLoaderProvider($ajax) {
 	        var templatePath = '',
 	            templateFormat = '',
 	            cache = {},
@@ -2571,12 +2647,11 @@
 	        };
 	    }
 
-	    module.exports = LoaderProvider;
+	    module.exports = TemplateLoaderProvider;
 	}(window.Ractive));
 
-
 /***/ },
-/* 27 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
@@ -2676,7 +2751,7 @@
 
 
 /***/ },
-/* 28 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/

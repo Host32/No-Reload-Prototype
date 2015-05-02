@@ -4,13 +4,13 @@
     var helpers = require('../helpers'),
         extend = helpers.extend,
         isString = helpers.isString,
-        loaderProvider = require('./loader-provider'),
+        templateLoaderProvider = require('./template-loader-provider'),
         partialProvider = require('./partial-provider'),
         componentProvider = require('./component-provider');
 
     function $TemplateProvider($ajax) {
         var instance,
-            loader = loaderProvider($ajax),
+            loader = templateLoaderProvider($ajax),
             partialManager = partialProvider(loader),
             componentManager = componentProvider(),
             components = {},
@@ -38,7 +38,7 @@
                     doneWithPartials = true,
                     doneWithComponents = true;
 
-                options.template = template;
+                options.template = template || '';
                 delete options.el;
                 delete options.controller;
                 delete options.serverLink;

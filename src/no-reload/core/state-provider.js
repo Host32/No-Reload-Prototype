@@ -5,31 +5,45 @@
     var helpers = require('../helpers'),
         isDefined = helpers.isDefined;
 
-    function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $urlResolver) {
+    function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $scriptLoader) {
         var instance,
             states = {},
             currentStateTree = [],
             lastUrl = '',
             loadingState = false,
             stateQueue = [],
+            stateRegisterQueue = [],
 
             resolveState;
 
-        function register(name, def) {
-            if (def.url) {
-                def.urlObject = $urlResolver.createUrlObject(def.url);
+        function resolveRegisterQueue() {
+            loadingState = false;
+            if (stateRegisterQueue.length) {
+                var state = stateRegisterQueue.shift();
+                resolveState(state.name, state.params);
             }
+        }
+
+        function register(name, def) {
             if (def.dataUrl) {
                 def.dataUrlFormat = def.dataUrl;
             }
             states[name] = def;
+
+            resolveRegisterQueue();
 
             return instance;
         }
 
         function updateDataUrl(name, params) {
             if (states[name]) {
-                states[name].dataUrl = $urlResolver.replaceUrl(params, states[name].dataUrlFormat);
+                var key;
+                states[name].dataUrl = states[name].dataUrlFormat;
+                for (key in params) {
+                    if (params.hasOwnProperty(key)) {
+                        states[name].dataUrl = states[name].dataUrl.replace(':' + key, params[key]);
+                    }
+                }
             }
         }
 
@@ -37,7 +51,7 @@
             loadingState = false;
             if (stateQueue.length) {
                 var state = stateQueue.shift();
-                resolveState(state.name, state.params);
+                resolveState(state.name, state.params, state.path);
             }
         }
 
@@ -52,26 +66,39 @@
                 return params;
             });
 
-            $controllerProvider.resolve(state.controller, myTemplate);
+            $controllerProvider.resolve(state.controller, myTemplate, state.controllerPath);
 
             myTemplate.render(state.el);
             resolveQueue();
         }
 
-        function putOnQueue(name, params) {
+        function putOnQueue(name, params, path) {
             stateQueue.push({
+                name: name,
+                params: params,
+                path: path
+            });
+        }
+
+        function putOnRegisterQueue(name, params) {
+            stateRegisterQueue.push({
                 name: name,
                 params: params
             });
         }
 
-        resolveState = function (name, params) {
-            if (!states[name]) {
+        resolveState = function (name, params, statePath) {
+            if (!states[name] && !statePath) {
+                return;
+            } else if (statePath) {
+                loadingState = true;
+                $scriptLoader.load(statePath);
+                putOnRegisterQueue(name, params);
                 return;
             }
 
             if (loadingState) {
-                putOnQueue(name, params);
+                putOnQueue(name, params, statePath);
                 return;
             }
 
@@ -95,6 +122,7 @@
             } else {
                 completeRequest = true;
             }
+
             $templateProvider.create(state).then(function (Template) {
                 myTemplate = new Template();
 
@@ -114,14 +142,11 @@
             return instance;
         }
 
-        function go(name, params) {
-            if (!states[name]) {
-                return;
-            }
-
+        function go(name, params, stateDepsPaths) {
             var subStates = name.split('.'),
                 diferentTree = false,
                 fullStateName = '',
+                statePath,
                 i;
 
             for (i = 0; i < subStates.length; i += 1) {
@@ -129,7 +154,8 @@
 
                 if (subStates[i] !== currentStateTree[i] || diferentTree || i === (subStates.length - 1)) {
                     diferentTree = true;
-                    resolveState(fullStateName, params);
+                    statePath = stateDepsPaths ? stateDepsPaths[i] : null;
+                    resolveState(fullStateName, params, statePath);
                 }
 
                 fullStateName += '.';
@@ -139,37 +165,9 @@
             return instance;
         }
 
-        function findByUrl(url) {
-            var key, state, urlMatch;
-
-            for (key in states) {
-                if (states.hasOwnProperty(key) && states[key].url) {
-                    urlMatch = $urlResolver.resolve(states[key].urlObject, url);
-                    if (urlMatch) {
-                        urlMatch.stateName = key;
-                        return urlMatch;
-                    }
-                }
-            }
-            return null;
-        }
-
-        function goToUrl(url) {
-            var found = findByUrl(url);
-
-            if (found) {
-                updateDataUrl(found.stateName, found.params);
-                go(found.stateName, found.params);
-                lastUrl = url;
-            }
-        }
 
         function isRegisteredState(name) {
             return isDefined(states[name]);
-        }
-
-        function isRegisteredUrl(url) {
-            return findByUrl(url) !== null;
         }
 
         function clearCurrentStateTree() {
@@ -185,8 +183,6 @@
             go: go,
             reload: reload,
             isRegisteredState: isRegisteredState,
-            isRegisteredUrl: isRegisteredUrl,
-            goToUrl: goToUrl,
             clearCurrentStateTree: clearCurrentStateTree,
             setCurrentStateTree: setCurrentStateTree
         };

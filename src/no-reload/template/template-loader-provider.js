@@ -2,7 +2,7 @@
 (function (Ractive) {
     'use strict';
 
-    function LoaderProvider($ajax) {
+    function TemplateLoaderProvider($ajax) {
         var templatePath = '',
             templateFormat = '',
             cache = {},
@@ -126,5 +126,5 @@
         };
     }
 
-    module.exports = LoaderProvider;
+    module.exports = TemplateLoaderProvider;
 }(window.Ractive));

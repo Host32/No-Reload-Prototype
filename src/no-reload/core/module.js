@@ -3,29 +3,36 @@
     'use strict';
     var $Injector = require('./injector'),
         $Ajax = require('../remote/ajax'),
+        $ScriptLoader = require('../remote/script-loader'),
         $Server = require('../remote/server'),
         $TemplateProvider = require('../template/template-provider'),
         $ControllerProvider = require('./controller-provider'),
-        $UrlResolver = require('./url-resolver'),
+        $RouteResolver = require('./route-resolver'),
         $StateProvider = require('./state-provider');
 
     function Module(deps) {
         var instance,
             $injector = $Injector(),
+            $scriptLoader = $ScriptLoader(),
             configs = [],
             runnables = [],
 
             onUrlChange;
 
+        $injector.get = $scriptLoader.load;
+
         $injector("$injector", function () {
             return $injector;
+        });
+        $injector("$scriptLoader", function () {
+            return $scriptLoader;
         });
 
         $injector("$ajax", $Ajax);
         $injector("$server", $Server);
         $injector("$controllerProvider", $ControllerProvider);
         $injector("$templateProvider", $TemplateProvider);
-        $injector("$urlResolver", $UrlResolver);
+        $injector("$routeResolver", $RouteResolver);
         $injector("$stateProvider", $StateProvider);
 
         function factory(name, constructor) {
@@ -73,17 +80,29 @@
             return instance;
         }
 
-        function go(state, params) {
+        function route(url, stateName, statePath) {
+            $injector(function ($routeResolver) {
+                $routeResolver.register(url, stateName, statePath);
+            });
+
+            return instance;
+        }
+
+        function go(state, params, stateDepsPaths) {
             $injector(function ($stateProvider) {
-                $stateProvider.go(state, params);
+                $stateProvider.go(state, params, stateDepsPaths);
             });
 
             return instance;
         }
 
         function goToUrl(url) {
-            $injector(function ($stateProvider) {
-                $stateProvider.goToUrl(url);
+            $injector(function ($stateProvider, $routeResolver) {
+                var urlObj = $routeResolver.resolve(url);
+
+                if (urlObj) {
+                    $stateProvider.go(urlObj.stateName, urlObj.params, urlObj.stateDepsPaths);
+                }
             });
 
             return instance;
@@ -136,6 +155,7 @@
             factory: factory,
             controller: controller,
             state: state,
+            route: route,
             component: component,
             partial: partial,
             go: go,

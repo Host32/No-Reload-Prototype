@@ -74,7 +74,6 @@
                             o: o
                         };
                     }
-                    func();
                 });
             } else {
                 if (modules[name].o !== undefined) {

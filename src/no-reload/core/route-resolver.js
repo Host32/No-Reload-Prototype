@@ -2,12 +2,14 @@
 (function () {
     'use strict';
 
-    function $UrlResolver() {
+    function $RouteResolver() {
+        var registered = {};
+
         function escapeGroup(group) {
             return group.replace(/([=!:$\/()])/g, '\\$1');
         }
 
-        function createUrlObject(path) {
+        function pathToRegexp(path) {
             var keys = [],
                 index = 0,
                 PATH_REGEXP = new RegExp([
@@ -87,34 +89,39 @@
             return matchedObject;
         }
 
-        function replaceUrl(params, url) {
-            var key;
+        function resolve(url) {
+            var key, params, urlObject;
 
-            for (key in params) {
-                if (params.hasOwnProperty(key)) {
-                    url = url.replace('{' + key + '}', params[key]);
+            for (key in registered) {
+                if (registered.hasOwnProperty(key)) {
+                    urlObject = registered[key];
+
+                    if (urlObject.regExp.test(url)) {
+                        params = extractParams(urlObject, url);
+                        urlObject.params = params;
+                        return urlObject;
+                    }
                 }
-            }
-            return url;
-        }
-
-        function resolve(urlObject, url) {
-            if (urlObject.regExp.test(url)) {
-                var params = extractParams(urlObject, url);
-                return {
-                    url: replaceUrl(params, url),
-                    params: params
-                };
             }
             return null;
         }
 
+        function register(url, stateName, stateDepsPaths) {
+            var reg = pathToRegexp(url);
+            registered[url] = {
+                url: url,
+                stateName: stateName,
+                stateDepsPaths: stateDepsPaths,
+                regExp: reg.regExp,
+                keys: reg.keys
+            };
+        }
+
         return {
-            createUrlObject: createUrlObject,
-            resolve: resolve,
-            replaceUrl: replaceUrl
+            register: register,
+            resolve: resolve
         };
     }
 
-    module.exports = $UrlResolver;
+    module.exports = $RouteResolver;
 }());
