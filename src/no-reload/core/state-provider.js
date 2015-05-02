@@ -13,6 +13,7 @@
             loadingState = false,
             stateQueue = [],
             stateRegisterQueue = [],
+            statePaths = {},
 
             resolveState;
 
@@ -22,6 +23,10 @@
                 var state = stateRegisterQueue.shift();
                 resolveState(state.name, state.params);
             }
+        }
+
+        function registerPath(name, path) {
+            statePaths[name] = path;
         }
 
         function register(name, def) {
@@ -35,16 +40,16 @@
             return instance;
         }
 
-        function updateDataUrl(name, params) {
-            if (states[name]) {
-                var key;
-                states[name].dataUrl = states[name].dataUrlFormat;
+        function formatDataUrl(stateDataUrl, params) {
+            var key, dataUrl = stateDataUrl;
+            if (dataUrl && params) {
                 for (key in params) {
                     if (params.hasOwnProperty(key)) {
-                        states[name].dataUrl = states[name].dataUrl.replace(':' + key, params[key]);
+                        dataUrl = dataUrl.replace(':' + key, params[key]);
                     }
                 }
             }
+            return dataUrl;
         }
 
         function resolveQueue() {
@@ -88,12 +93,16 @@
         }
 
         resolveState = function (name, params, statePath) {
-            if (!states[name] && !statePath) {
-                return;
-            } else if (statePath) {
-                loadingState = true;
-                $scriptLoader.load(statePath);
-                putOnRegisterQueue(name, params);
+            if (!states[name]) {
+                if (statePath) {
+                    loadingState = true;
+                    $scriptLoader.load(statePath);
+                    putOnRegisterQueue(name, params);
+                } else if (statePaths[name]) {
+                    loadingState = true;
+                    $scriptLoader.load(statePaths[name]);
+                    putOnRegisterQueue(name, params);
+                }
                 return;
             }
 
@@ -103,7 +112,7 @@
             }
 
             var state = states[name],
-                dataUrl = state.dataUrl,
+                dataUrl = formatDataUrl(state.dataUrl, params),
                 data = state.data || {},
                 myTemplate,
                 completeRequest = false,
@@ -155,12 +164,13 @@
                 if (subStates[i] !== currentStateTree[i] || diferentTree || i === (subStates.length - 1)) {
                     diferentTree = true;
                     statePath = stateDepsPaths ? stateDepsPaths[i] : null;
-                    resolveState(fullStateName, params, statePath);
+                    putOnQueue(fullStateName, params, statePath);
                 }
 
                 fullStateName += '.';
             }
             currentStateTree = subStates;
+            resolveQueue();
 
             return instance;
         }
@@ -180,6 +190,7 @@
 
         instance = {
             register: register,
+            registerPath: registerPath,
             go: go,
             reload: reload,
             isRegisteredState: isRegisteredState,

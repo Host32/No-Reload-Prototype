@@ -1473,7 +1473,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function () {
+	(function (Ractive) {
 	    'use strict';
 	    var $Injector = __webpack_require__(19),
 	        $Ajax = __webpack_require__(20),
@@ -1482,18 +1482,19 @@
 	        $TemplateProvider = __webpack_require__(23),
 	        $ControllerProvider = __webpack_require__(24),
 	        $RouteResolver = __webpack_require__(25),
-	        $StateProvider = __webpack_require__(26);
+	        $StateProvider = __webpack_require__(26),
+	        helpers = __webpack_require__(4),
+	        isString = helpers.isString,
+	        isFunction = helpers.isFunction,
+	        isArray = helpers.isArray;
 
-	    function Module(path) {
+	    function Module() {
 	        var instance,
 	            $injector = $Injector(),
 	            $scriptLoader = $ScriptLoader(),
 	            configs = [],
-	            runnables = [],
+	            runnables = [];
 
-	            onUrlChange;
-
-	        $scriptLoader.setDefaultPath(path || '');
 	        $injector.get = $scriptLoader.load;
 
 	        $injector("$injector", function () {
@@ -1511,10 +1512,10 @@
 	        $injector("$stateProvider", $StateProvider);
 
 	        function factory(name, constructor) {
-	            if (typeof name !== 'string') {
+	            if (!isString(name)) {
 	                throw 'invalid service name';
 	            }
-	            if (typeof constructor !== 'function') {
+	            if (!isFunction(constructor) && !isArray(constructor)) {
 	                throw 'invalid service constructor';
 	            }
 
@@ -1556,9 +1557,15 @@
 	        }
 
 	        function route(url, stateName, statePath) {
-	            $injector(function ($routeResolver) {
-	                $routeResolver.register(url, stateName, statePath);
-	            });
+	            if (!url) {
+	                $injector(function ($stateProvider) {
+	                    $stateProvider.registerPath(stateName, statePath);
+	                });
+	            } else {
+	                $injector(function ($routeResolver) {
+	                    $routeResolver.register(url, stateName, statePath);
+	                });
+	            }
 
 	            return instance;
 	        }
@@ -1595,19 +1602,37 @@
 
 	        function config(func) {
 	            configs.push(func);
-	            return instance;
-	        }
 
-	        function run(func) {
-	            runnables.push(func);
 	            return instance;
 	        }
 
 	        function configPhase() {
-	            var i;
-	            for (i = 0; i < configs.length; i += 1) {
-	                $injector(configs[i]);
-	            }
+	            return new Ractive.Promise(function (resolve, reject) {
+	                if (configs.length === 0) {
+	                    resolve();
+	                }
+	                var i,
+	                    pendents = configs.length,
+
+	                    execOne = function (i) {
+	                        $injector(configs[i]).then(function () {
+	                            pendents -= 1;
+
+	                            if (!pendents) {
+	                                resolve();
+	                            }
+	                        });
+	                    };
+	                for (i = 0; i < configs.length; i += 1) {
+	                    execOne(i);
+	                }
+	            });
+	        }
+
+	        function run(func) {
+	            runnables.push(func);
+
+	            return instance;
 	        }
 
 	        function runPhase() {
@@ -1617,13 +1642,10 @@
 	            }
 	        }
 
-	        onUrlChange = function (url) {
-	            goToUrl(url);
-	        };
-
 	        function start() {
-	            configPhase();
-	            runPhase();
+	            configPhase().then(function () {
+	                runPhase();
+	            });
 	        }
 
 	        instance = {
@@ -1635,11 +1657,10 @@
 	            partial: partial,
 	            go: go,
 	            goToUrl: goToUrl,
-	            config: config,
 	            run: run,
+	            config: config,
 	            isRegisteredState: isRegisteredState,
 	            isRegisteredUrl: isRegisteredUrl,
-	            onUrlChange: onUrlChange,
 	            start: start
 	        };
 
@@ -1647,7 +1668,7 @@
 	    }
 
 	    module.exports = Module;
-	}());
+	}(window.Ractive));
 
 /***/ },
 /* 19 */
@@ -1658,7 +1679,7 @@
 	 */
 	/*global module*/
 	/*jslint plusplus:true*/
-	(function () {
+	(function (Ractive) {
 	    'use strict';
 
 	    function $Injector() {
@@ -1728,6 +1749,7 @@
 	                        modules[name] = {
 	                            o: o
 	                        };
+	                        func();
 	                    }
 	                });
 	            } else {
@@ -1796,20 +1818,22 @@
 	                modules[obj.n] = obj;
 	            }
 
-	            function dependencyResolver(dependency, callback) {
-	                queueOrGet(dependency, function () {
-	                    callback(modules[dependency].o);
-	                });
-	            }
+	            return new Ractive.Promise(function (resolve, reject) {
+	                var dependencyResolver = function (dependency, callback) {
+	                        queueOrGet(dependency, function () {
+	                            callback(modules[dependency].o);
+	                        });
+	                    },
+	                    execute = function (loadedDependencies) {
+	                        obj.o = obj.c.apply(obj.s, loadedDependencies);
+	                        resolve();
+	                        if (obj.n) {
+	                            runQueue(obj.n);
+	                        }
+	                    };
 
-	            function execute(loadedDependencies) {
-	                obj.o = obj.c.apply(obj.s, loadedDependencies);
-	                if (obj.n) {
-	                    runQueue(obj.n);
-	                }
-	            }
-
-	            asyncMap(obj.d, dependencyResolver, execute);
+	                asyncMap(obj.d, dependencyResolver, execute);
+	            });
 	        };
 
 	        invoke.clear = function (name) {
@@ -1831,8 +1855,7 @@
 	    }
 
 	    module.exports = $Injector;
-	}());
-
+	}(window.Ractive));
 
 /***/ },
 /* 20 */
@@ -1897,7 +1920,6 @@
 
 	    module.exports = $ScriptLoader;
 	}(window.jQuery));
-
 
 /***/ },
 /* 22 */
@@ -2007,7 +2029,6 @@
 
 	    module.exports = $Server;
 	}());
-
 
 /***/ },
 /* 23 */
@@ -2365,6 +2386,7 @@
 	            loadingState = false,
 	            stateQueue = [],
 	            stateRegisterQueue = [],
+	            statePaths = {},
 
 	            resolveState;
 
@@ -2374,6 +2396,10 @@
 	                var state = stateRegisterQueue.shift();
 	                resolveState(state.name, state.params);
 	            }
+	        }
+
+	        function registerPath(name, path) {
+	            statePaths[name] = path;
 	        }
 
 	        function register(name, def) {
@@ -2387,16 +2413,16 @@
 	            return instance;
 	        }
 
-	        function updateDataUrl(name, params) {
-	            if (states[name]) {
-	                var key;
-	                states[name].dataUrl = states[name].dataUrlFormat;
+	        function formatDataUrl(stateDataUrl, params) {
+	            var key, dataUrl = stateDataUrl;
+	            if (dataUrl && params) {
 	                for (key in params) {
 	                    if (params.hasOwnProperty(key)) {
-	                        states[name].dataUrl = states[name].dataUrl.replace(':' + key, params[key]);
+	                        dataUrl = dataUrl.replace(':' + key, params[key]);
 	                    }
 	                }
 	            }
+	            return dataUrl;
 	        }
 
 	        function resolveQueue() {
@@ -2440,12 +2466,16 @@
 	        }
 
 	        resolveState = function (name, params, statePath) {
-	            if (!states[name] && !statePath) {
-	                return;
-	            } else if (statePath) {
-	                loadingState = true;
-	                $scriptLoader.load(statePath);
-	                putOnRegisterQueue(name, params);
+	            if (!states[name]) {
+	                if (statePath) {
+	                    loadingState = true;
+	                    $scriptLoader.load(statePath);
+	                    putOnRegisterQueue(name, params);
+	                } else if (statePaths[name]) {
+	                    loadingState = true;
+	                    $scriptLoader.load(statePaths[name]);
+	                    putOnRegisterQueue(name, params);
+	                }
 	                return;
 	            }
 
@@ -2455,7 +2485,7 @@
 	            }
 
 	            var state = states[name],
-	                dataUrl = state.dataUrl,
+	                dataUrl = formatDataUrl(state.dataUrl, params),
 	                data = state.data || {},
 	                myTemplate,
 	                completeRequest = false,
@@ -2507,12 +2537,13 @@
 	                if (subStates[i] !== currentStateTree[i] || diferentTree || i === (subStates.length - 1)) {
 	                    diferentTree = true;
 	                    statePath = stateDepsPaths ? stateDepsPaths[i] : null;
-	                    resolveState(fullStateName, params, statePath);
+	                    putOnQueue(fullStateName, params, statePath);
 	                }
 
 	                fullStateName += '.';
 	            }
 	            currentStateTree = subStates;
+	            resolveQueue();
 
 	            return instance;
 	        }
@@ -2532,6 +2563,7 @@
 
 	        instance = {
 	            register: register,
+	            registerPath: registerPath,
 	            go: go,
 	            reload: reload,
 	            isRegisteredState: isRegisteredState,
@@ -2544,7 +2576,6 @@
 
 	    module.exports = $StateProvider;
 	}());
-
 
 /***/ },
 /* 27 */

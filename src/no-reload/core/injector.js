@@ -3,7 +3,7 @@
  */
 /*global module*/
 /*jslint plusplus:true*/
-(function () {
+(function (Ractive) {
     'use strict';
 
     function $Injector() {
@@ -73,6 +73,7 @@
                         modules[name] = {
                             o: o
                         };
+                        func();
                     }
                 });
             } else {
@@ -141,20 +142,22 @@
                 modules[obj.n] = obj;
             }
 
-            function dependencyResolver(dependency, callback) {
-                queueOrGet(dependency, function () {
-                    callback(modules[dependency].o);
-                });
-            }
+            return new Ractive.Promise(function (resolve, reject) {
+                var dependencyResolver = function (dependency, callback) {
+                        queueOrGet(dependency, function () {
+                            callback(modules[dependency].o);
+                        });
+                    },
+                    execute = function (loadedDependencies) {
+                        obj.o = obj.c.apply(obj.s, loadedDependencies);
+                        resolve();
+                        if (obj.n) {
+                            runQueue(obj.n);
+                        }
+                    };
 
-            function execute(loadedDependencies) {
-                obj.o = obj.c.apply(obj.s, loadedDependencies);
-                if (obj.n) {
-                    runQueue(obj.n);
-                }
-            }
-
-            asyncMap(obj.d, dependencyResolver, execute);
+                asyncMap(obj.d, dependencyResolver, execute);
+            });
         };
 
         invoke.clear = function (name) {
@@ -176,4 +179,4 @@
     }
 
     module.exports = $Injector;
-}());
+}(window.Ractive));
