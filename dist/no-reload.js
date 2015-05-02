@@ -1493,7 +1493,7 @@
 
 	            onUrlChange;
 
-	        $scriptLoader.setDefaultPath(path);
+	        $scriptLoader.setDefaultPath(path || '');
 	        $injector.get = $scriptLoader.load;
 
 	        $injector("$injector", function () {
