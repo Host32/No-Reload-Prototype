@@ -109,7 +109,7 @@
                 var urlObj = $routeResolver.resolve(url);
 
                 if (urlObj) {
-                    $stateProvider.go(urlObj.stateName, urlObj.params, urlObj.stateDepsPaths);
+                    $stateProvider.go(urlObj.stateName, urlObj.params, urlObj.statePath);
                 }
             });
 

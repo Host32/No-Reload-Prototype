@@ -106,12 +106,12 @@
             return null;
         }
 
-        function register(url, stateName, stateDepsPaths) {
+        function register(url, stateName, statePath) {
             var reg = pathToRegexp(url);
             registered[url] = {
                 url: url,
                 stateName: stateName,
-                stateDepsPaths: stateDepsPaths,
+                statePath: statePath,
                 regExp: reg.regExp,
                 keys: reg.keys
             };

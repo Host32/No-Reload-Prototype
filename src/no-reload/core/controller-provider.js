@@ -1,5 +1,5 @@
 /*global module, require*/
-(function () {
+(function (Ractive) {
     'use strict';
     var helpers = require('../helpers'),
         isFunction = helpers.isFunction,
@@ -10,39 +10,61 @@
             controllers = {},
             resolve,
 
-            registerQueue = [];
+            registerQueue = {};
 
-        function resolveRegisterQueue() {
-            if (registerQueue.length) {
-                var controller = registerQueue.shift();
-                resolve(controller.name, controller.scope);
+        function resolveSingleQueue(controller) {
+            resolve(controller.name, controller.scope).then(function () {
+                if (controller.callback) {
+                    controller.callback();
+                }
+            });
+        }
+
+        function resolveRegisterQueue(name) {
+            if (registerQueue[name]) {
+                var i, controller;
+                for (i = 0; i < registerQueue[name].length; i += 1) {
+                    controller = registerQueue[name][i];
+                    resolveSingleQueue(controller);
+                }
+                delete registerQueue[name];
             }
         }
 
         function register(name, constructor) {
             controllers[name] = constructor;
 
-            resolveRegisterQueue();
+            resolveRegisterQueue(name);
 
             return instance;
         }
 
-        function putOnRegisterQueue(name, scope) {
-            registerQueue.push({
+        function putOnRegisterQueue(name, scope, callback) {
+            if (!registerQueue[name]) {
+                registerQueue[name] = [];
+            }
+            registerQueue[name].push({
                 name: name,
-                scope: scope
+                scope: scope,
+                callback: callback
             });
         }
 
         resolve = function (controller, scope, path) {
-            if (isFunction(controller) || isArray(controller)) {
-                $injector(controller, scope);
-            } else if (controllers[controller]) {
-                $injector(controllers[controller], scope);
-            } else if (path) {
-                $scriptLoader.load(path);
-                putOnRegisterQueue(controller, scope);
-            }
+            return new Ractive.Promise(function (resolve, reject) {
+                if (isFunction(controller) || isArray(controller)) {
+                    $injector(controller, scope).then(function () {
+                        resolve();
+                    });
+                } else if (controllers[controller]) {
+                    $injector(controllers[controller], scope).then(function () {
+                        resolve();
+                    });
+                } else if (path) {
+                    $scriptLoader.load(path);
+                    putOnRegisterQueue(controller, scope, resolve);
+                }
+            });
         };
 
         instance = {
@@ -54,4 +76,4 @@
     }
 
     module.exports = $ControllerProvider;
-}());
+}(window.Ractive));

@@ -1,4 +1,4 @@
-(function (app, QUnit) {
+(function (app, QUnit, $) {
     'use strict';
     QUnit.module("URL");
 
@@ -12,12 +12,14 @@
         });
 
         app.controller("URLTest", function () {
-            assert.equal($('#test-space').html(), 'URL OK', 'acessado pela url ok');
-            done();
+            this.onrender = function () {
+                assert.equal($('#test-space').html(), 'URL OK', 'acessado pela url ok');
+                done();
+            };
         });
 
         app.route("/URlTest", "URLTest");
 
         app.goToUrl("/URlTest");
     });
-}(window.app, window.QUnit));
+}(window.app, window.QUnit, window.jQuery));

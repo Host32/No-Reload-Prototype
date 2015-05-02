@@ -14,6 +14,10 @@
             stateQueue = [],
             stateRegisterQueue = [],
             statePaths = {},
+            listeners = {
+                beforeLoad: [],
+                afterLoad: []
+            },
 
             resolveState;
 
@@ -40,6 +44,17 @@
             return instance;
         }
 
+        function registerListener(phase, listener) {
+            listeners[phase].push(listener);
+        }
+
+        function callListeners(phase) {
+            var i;
+            for (i = 0; i < listeners[phase].length; i += 1) {
+                listeners[phase][i]();
+            }
+        }
+
         function formatDataUrl(stateDataUrl, params) {
             var key, dataUrl = stateDataUrl;
             if (dataUrl && params) {
@@ -57,6 +72,8 @@
             if (stateQueue.length) {
                 var state = stateQueue.shift();
                 resolveState(state.name, state.params, state.path);
+            } else {
+                callListeners('afterLoad');
             }
         }
 
@@ -71,10 +88,15 @@
                 return params;
             });
 
-            $controllerProvider.resolve(state.controller, myTemplate, state.controllerPath);
-
-            myTemplate.render(state.el);
-            resolveQueue();
+            if (state.controller) {
+                $controllerProvider.resolve(state.controller, myTemplate, state.controllerPath).then(function () {
+                    myTemplate.render(state.el);
+                    resolveQueue();
+                });
+            } else {
+                myTemplate.render(state.el);
+                resolveQueue();
+            }
         }
 
         function putOnQueue(name, params, path) {
@@ -151,19 +173,20 @@
             return instance;
         }
 
-        function go(name, params, stateDepsPaths) {
+        function go(name, params, statePath) {
             var subStates = name.split('.'),
                 diferentTree = false,
                 fullStateName = '',
-                statePath,
+                path,
                 i;
 
+            callListeners('beforeLoad');
             for (i = 0; i < subStates.length; i += 1) {
                 fullStateName += subStates[i];
 
                 if (subStates[i] !== currentStateTree[i] || diferentTree || i === (subStates.length - 1)) {
                     diferentTree = true;
-                    statePath = stateDepsPaths ? stateDepsPaths[i] : null;
+                    path = i === (subStates.length - 1) ? statePath : null;
                     putOnQueue(fullStateName, params, statePath);
                 }
 
@@ -195,7 +218,8 @@
             reload: reload,
             isRegisteredState: isRegisteredState,
             clearCurrentStateTree: clearCurrentStateTree,
-            setCurrentStateTree: setCurrentStateTree
+            setCurrentStateTree: setCurrentStateTree,
+            registerListener: registerListener
         };
 
         return instance;
