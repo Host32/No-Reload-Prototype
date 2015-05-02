@@ -117,9 +117,22 @@
             };
         }
 
+        function isRegistered(url) {
+            var key;
+            for (key in registered) {
+                if (registered.hasOwnProperty(key)) {
+                    if (registered[key].regExp.test(url)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         return {
             register: register,
-            resolve: resolve
+            resolve: resolve,
+            isRegistered: isRegistered
         };
     }
 

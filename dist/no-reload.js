@@ -1588,8 +1588,8 @@
 	        }
 
 	        function isRegisteredUrl(url) {
-	            var $stateProvider = $injector.getDependency('$stateProvider');
-	            return $stateProvider.isRegisteredUrl(url);
+	            var $routeResolver = $injector.getDependency('$routeResolver');
+	            return $routeResolver.isRegistered(url);
 	        }
 
 	        function config(func) {
@@ -1647,7 +1647,6 @@
 
 	    module.exports = Module;
 	}());
-
 
 /***/ },
 /* 19 */
@@ -1897,6 +1896,7 @@
 
 	    module.exports = $ScriptLoader;
 	}(window.jQuery));
+
 
 /***/ },
 /* 22 */
@@ -2322,15 +2322,27 @@
 	            };
 	        }
 
+	        function isRegistered(url) {
+	            var key;
+	            for (key in registered) {
+	                if (registered.hasOwnProperty(key)) {
+	                    if (registered[key].regExp.test(url)) {
+	                        return true;
+	                    }
+	                }
+	            }
+	            return false;
+	        }
+
 	        return {
 	            register: register,
-	            resolve: resolve
+	            resolve: resolve,
+	            isRegistered: isRegistered
 	        };
 	    }
 
 	    module.exports = $RouteResolver;
 	}());
-
 
 /***/ },
 /* 26 */

@@ -114,8 +114,8 @@
         }
 
         function isRegisteredUrl(url) {
-            var $stateProvider = $injector.getDependency('$stateProvider');
-            return $stateProvider.isRegisteredUrl(url);
+            var $routeResolver = $injector.getDependency('$routeResolver');
+            return $routeResolver.isRegistered(url);
         }
 
         function config(func) {
