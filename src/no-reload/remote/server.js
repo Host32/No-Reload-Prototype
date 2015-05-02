@@ -46,6 +46,9 @@
 
         function registerInterceptor(phase, interceptor) {
             phase = phase || 'success';
+            if (!interceptors[phase]) {
+                interceptors[phase] = [];
+            }
             interceptors[phase].push(interceptor);
         }
 

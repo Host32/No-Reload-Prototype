@@ -1670,6 +1670,7 @@
 	    module.exports = Module;
 	}(window.Ractive));
 
+
 /***/ },
 /* 19 */
 /***/ function(module, exports, __webpack_require__) {
@@ -1975,6 +1976,9 @@
 
 	        function registerInterceptor(phase, interceptor) {
 	            phase = phase || 'success';
+	            if (!interceptors[phase]) {
+	                interceptors[phase] = [];
+	            }
 	            interceptors[phase].push(interceptor);
 	        }
 
@@ -2043,7 +2047,6 @@
 
 	    module.exports = $Server;
 	}());
-
 
 /***/ },
 /* 23 */
@@ -2257,6 +2260,7 @@
 	    module.exports = $ControllerProvider;
 	}(window.Ractive));
 
+
 /***/ },
 /* 25 */
 /***/ function(module, exports, __webpack_require__) {
@@ -2401,6 +2405,7 @@
 
 	    module.exports = $RouteResolver;
 	}());
+
 
 /***/ },
 /* 26 */
@@ -2635,6 +2640,7 @@
 
 	    module.exports = $StateProvider;
 	}());
+
 
 /***/ },
 /* 27 */
