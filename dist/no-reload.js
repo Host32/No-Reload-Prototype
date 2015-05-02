@@ -1648,6 +1648,7 @@
 	    module.exports = Module;
 	}());
 
+
 /***/ },
 /* 19 */
 /***/ function(module, exports, __webpack_require__) {
@@ -1832,6 +1833,7 @@
 	    module.exports = $Injector;
 	}());
 
+
 /***/ },
 /* 20 */
 /***/ function(module, exports, __webpack_require__) {
@@ -1857,7 +1859,8 @@
 	    'use strict';
 
 	    function $ScriptLoader() {
-	        var defaultPath = '';
+	        var defaultPath = '',
+	            defaultFormat = '.js';
 
 	        function getDefaultPath() {
 	            return defaultPath;
@@ -1867,8 +1870,16 @@
 	            defaultPath = path;
 	        }
 
+	        function getDefaultFormat() {
+	            return defaultFormat;
+	        }
+
+	        function setDefaultFormat(format) {
+	            defaultFormat = format;
+	        }
+
 	        function formatPath(path) {
-	            return defaultPath + path;
+	            return defaultPath + path + defaultFormat;
 	        }
 
 	        function load(path) {
@@ -1878,6 +1889,8 @@
 	        return {
 	            getDefaultPath: getDefaultPath,
 	            setDefaultPath: setDefaultPath,
+	            getDefaultFormat: getDefaultFormat,
+	            setDefaultFormat: setDefaultFormat,
 	            load: load
 	        };
 	    }
@@ -2122,6 +2135,7 @@
 	    module.exports = $TemplateProvider;
 	}(window.Ractive));
 
+
 /***/ },
 /* 24 */
 /***/ function(module, exports, __webpack_require__) {
@@ -2183,6 +2197,7 @@
 
 	    module.exports = $ControllerProvider;
 	}());
+
 
 /***/ },
 /* 25 */
@@ -2315,6 +2330,7 @@
 
 	    module.exports = $RouteResolver;
 	}());
+
 
 /***/ },
 /* 26 */
@@ -2515,6 +2531,7 @@
 	    module.exports = $StateProvider;
 	}());
 
+
 /***/ },
 /* 27 */
 /***/ function(module, exports, __webpack_require__) {
@@ -2649,6 +2666,7 @@
 
 	    module.exports = TemplateLoaderProvider;
 	}(window.Ractive));
+
 
 /***/ },
 /* 28 */

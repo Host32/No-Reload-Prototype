@@ -9,7 +9,7 @@
             controller: "LazyDepController"
         });
 
-        app.controller("LazyDepController", ["lazy/dependency.js", function (lazyDep) {
+        app.controller("LazyDepController", ["lazy/dependency", function (lazyDep) {
             assert.equal(lazyDep, 'Deu certo!', 'Lazy dep carregada');
             done();
         }]);
@@ -27,7 +27,7 @@
             return assert;
         });
 
-        app.route("/lazyState", "LazyState", ["lazy/state.js"]);
+        app.route("/lazyState", "LazyState", ["lazy/state"]);
 
         app.goToUrl("/lazyState");
     });

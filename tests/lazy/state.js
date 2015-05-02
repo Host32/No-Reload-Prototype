@@ -3,6 +3,6 @@
 
     app.state("LazyState", {
         controller: "LazyController",
-        controllerPath: "lazy/controller.js"
+        controllerPath: "lazy/controller"
     });
 }(window.app));

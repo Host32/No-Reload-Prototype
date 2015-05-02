@@ -1,7 +1,7 @@
 (function (app) {
     'use strict';
 
-    app.factory("lazy/dependency.js", function () {
+    app.factory("lazy/dependency", function () {
         return "Deu certo!";
     });
 }(window.app));

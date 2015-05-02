@@ -3,7 +3,8 @@
     'use strict';
 
     function $ScriptLoader() {
-        var defaultPath = '';
+        var defaultPath = '',
+            defaultFormat = '.js';
 
         function getDefaultPath() {
             return defaultPath;
@@ -13,8 +14,16 @@
             defaultPath = path;
         }
 
+        function getDefaultFormat() {
+            return defaultFormat;
+        }
+
+        function setDefaultFormat(format) {
+            defaultFormat = format;
+        }
+
         function formatPath(path) {
-            return defaultPath + path;
+            return defaultPath + path + defaultFormat;
         }
 
         function load(path) {
@@ -24,6 +33,8 @@
         return {
             getDefaultPath: getDefaultPath,
             setDefaultPath: setDefaultPath,
+            getDefaultFormat: getDefaultFormat,
+            setDefaultFormat: setDefaultFormat,
             load: load
         };
     }
