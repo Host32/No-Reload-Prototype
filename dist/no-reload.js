@@ -1484,7 +1484,7 @@
 	        $RouteResolver = __webpack_require__(25),
 	        $StateProvider = __webpack_require__(26);
 
-	    function Module(deps) {
+	    function Module(path) {
 	        var instance,
 	            $injector = $Injector(),
 	            $scriptLoader = $ScriptLoader(),
@@ -1493,6 +1493,7 @@
 
 	            onUrlChange;
 
+	        $scriptLoader.setDefaultPath(path);
 	        $injector.get = $scriptLoader.load;
 
 	        $injector("$injector", function () {
@@ -2343,6 +2344,7 @@
 
 	    module.exports = $RouteResolver;
 	}());
+
 
 /***/ },
 /* 26 */

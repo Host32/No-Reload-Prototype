@@ -10,7 +10,7 @@
         $RouteResolver = require('./route-resolver'),
         $StateProvider = require('./state-provider');
 
-    function Module(deps) {
+    function Module(path) {
         var instance,
             $injector = $Injector(),
             $scriptLoader = $ScriptLoader(),
@@ -19,6 +19,7 @@
 
             onUrlChange;
 
+        $scriptLoader.setDefaultPath(path);
         $injector.get = $scriptLoader.load;
 
         $injector("$injector", function () {
