@@ -1788,7 +1788,8 @@
 	            var args = arguments,
 	                info,
 	                target,
-	                obj = {};
+	                obj = {},
+	                copy;
 
 	            if (typeof args[0] === 'string') {
 	                obj.n = args[0];
@@ -1803,8 +1804,9 @@
 	                obj.d = getFuncArgs(info);
 	                obj.c = info;
 	            } else {
-	                obj.c = info.pop();
-	                obj.d = info;
+	                copy = info.slice(0);
+	                obj.c = copy.pop();
+	                obj.d = copy;
 	            }
 
 	            if (obj.n) {
@@ -1857,7 +1859,6 @@
 
 	    module.exports = $Injector;
 	}(window.Ractive));
-
 
 /***/ },
 /* 20 */
@@ -2047,6 +2048,7 @@
 
 	    module.exports = $Server;
 	}());
+
 
 /***/ },
 /* 23 */
@@ -2259,7 +2261,6 @@
 
 	    module.exports = $ControllerProvider;
 	}(window.Ractive));
-
 
 /***/ },
 /* 25 */
