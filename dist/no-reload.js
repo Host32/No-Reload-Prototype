@@ -1860,6 +1860,7 @@
 	    module.exports = $Injector;
 	}(window.Ractive));
 
+
 /***/ },
 /* 20 */
 /***/ function(module, exports, __webpack_require__) {
@@ -2008,8 +2009,6 @@
 	            var url = params.url || '';
 	            params.url = instance.prepareUrl(url);
 
-	            params = extend({}, defaultParams, params);
-
 	            params = createInterceptors(params);
 
 	            return $ajax(params);
@@ -2048,7 +2047,6 @@
 
 	    module.exports = $Server;
 	}());
-
 
 /***/ },
 /* 23 */
@@ -2261,6 +2259,7 @@
 
 	    module.exports = $ControllerProvider;
 	}(window.Ractive));
+
 
 /***/ },
 /* 25 */
