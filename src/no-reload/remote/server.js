@@ -44,7 +44,7 @@
 
             params = extend({}, defaultParams, params);
 
-            $ajax(params);
+            return $ajax(params);
         }
 
         function get(url, callback) {
@@ -54,7 +54,7 @@
                 success: callback
             });
 
-            $ajax(params);
+            return $ajax(params);
         }
 
         instance = {
