@@ -322,13 +322,13 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($) {
+	(function () {
 	    'use strict';
 	    var helpers = __webpack_require__(4),
 	        moduleProvider = __webpack_require__(15);
 
 	    module.exports = moduleProvider;
-	}(window.jQuery));
+	}());
 
 
 /***/ },
@@ -1195,7 +1195,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($) {
+	(function () {
 	    'use strict';
 	    var moduleFactory = __webpack_require__(18),
 
@@ -1209,7 +1209,7 @@
 	        };
 
 	    module.exports = moduleProvider;
-	}(window.jQuery));
+	}());
 
 
 /***/ },
@@ -1473,40 +1473,49 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($) {
+	(function (Ractive) {
 	    'use strict';
 	    var $Injector = __webpack_require__(19),
 	        $Ajax = __webpack_require__(20),
-	        $Server = __webpack_require__(21),
-	        $TemplateProvider = __webpack_require__(22),
-	        $ControllerProvider = __webpack_require__(23),
-	        $UrlResolver = __webpack_require__(24),
-	        $StateProvider = __webpack_require__(25);
+	        $ScriptLoader = __webpack_require__(21),
+	        $Server = __webpack_require__(22),
+	        $TemplateProvider = __webpack_require__(23),
+	        $ControllerProvider = __webpack_require__(24),
+	        $RouteResolver = __webpack_require__(25),
+	        $StateProvider = __webpack_require__(26),
+	        helpers = __webpack_require__(4),
+	        isString = helpers.isString,
+	        isFunction = helpers.isFunction,
+	        isArray = helpers.isArray;
 
-	    function Module(deps) {
+	    function Module() {
 	        var instance,
 	            $injector = $Injector(),
+	            $scriptLoader = $ScriptLoader(),
 	            configs = [],
-	            runnables = [],
+	            runnables = [];
 
-	            onUrlChange;
+	        $injector.get = $scriptLoader.load;
 
 	        $injector("$injector", function () {
 	            return $injector;
+	        });
+	        $injector("$scriptLoader", function () {
+	            return $scriptLoader;
 	        });
 
 	        $injector("$ajax", $Ajax);
 	        $injector("$server", $Server);
 	        $injector("$controllerProvider", $ControllerProvider);
 	        $injector("$templateProvider", $TemplateProvider);
-	        $injector("$urlResolver", $UrlResolver);
+	        $injector("$routeResolver", $RouteResolver);
 	        $injector("$stateProvider", $StateProvider);
 
 	        function factory(name, constructor) {
-	            if (typeof name !== 'string') {
+	            if (!isString(name)) {
 	                throw 'invalid service name';
 	            }
-	            if (typeof constructor !== 'function') {
+	            if (!isFunction(constructor) && !isArray(constructor)) {
 	                throw 'invalid service constructor';
 	            }
 
@@ -1547,17 +1556,35 @@
 	            return instance;
 	        }
 
-	        function go(state, params) {
+	        function route(url, stateName, statePath) {
+	            if (!url) {
+	                $injector(function ($stateProvider) {
+	                    $stateProvider.registerPath(stateName, statePath);
+	                });
+	            } else {
+	                $injector(function ($routeResolver) {
+	                    $routeResolver.register(url, stateName, statePath);
+	                });
+	            }
+
+	            return instance;
+	        }
+
+	        function go(state, params, stateDepsPaths) {
 	            $injector(function ($stateProvider) {
-	                $stateProvider.go(state, params);
+	                $stateProvider.go(state, params, stateDepsPaths);
 	            });
 
 	            return instance;
 	        }
 
 	        function goToUrl(url) {
-	            $injector(function ($stateProvider) {
-	                $stateProvider.goToUrl(url);
+	            $injector(function ($stateProvider, $routeResolver) {
+	                var urlObj = $routeResolver.resolve(url);
+
+	                if (urlObj) {
+	                    $stateProvider.go(urlObj.stateName, urlObj.params, urlObj.statePath);
+	                }
 	            });
 
 	            return instance;
@@ -1569,25 +1596,43 @@
 	        }
 
 	        function isRegisteredUrl(url) {
-	            var $stateProvider = $injector.getDependency('$stateProvider');
-	            return $stateProvider.isRegisteredUrl(url);
+	            var $routeResolver = $injector.getDependency('$routeResolver');
+	            return $routeResolver.isRegistered(url);
 	        }
 
 	        function config(func) {
 	            configs.push(func);
-	            return instance;
-	        }
 
-	        function run(func) {
-	            runnables.push(func);
 	            return instance;
 	        }
 
 	        function configPhase() {
-	            var i;
-	            for (i = 0; i < configs.length; i += 1) {
-	                $injector(configs[i]);
-	            }
+	            return new Ractive.Promise(function (resolve, reject) {
+	                if (configs.length === 0) {
+	                    resolve();
+	                }
+	                var i,
+	                    pendents = configs.length,
+
+	                    execOne = function (i) {
+	                        $injector(configs[i]).then(function () {
+	                            pendents -= 1;
+
+	                            if (!pendents) {
+	                                resolve();
+	                            }
+	                        });
+	                    };
+	                for (i = 0; i < configs.length; i += 1) {
+	                    execOne(i);
+	                }
+	            });
+	        }
+
+	        function run(func) {
+	            runnables.push(func);
+
+	            return instance;
 	        }
 
 	        function runPhase() {
@@ -1597,28 +1642,25 @@
 	            }
 	        }
 
-	        onUrlChange = function (url) {
-	            goToUrl(url);
-	        };
-
 	        function start() {
-	            configPhase();
-	            runPhase();
+	            configPhase().then(function () {
+	                runPhase();
+	            });
 	        }
 
 	        instance = {
 	            factory: factory,
 	            controller: controller,
 	            state: state,
+	            route: route,
 	            component: component,
 	            partial: partial,
 	            go: go,
 	            goToUrl: goToUrl,
-	            config: config,
 	            run: run,
+	            config: config,
 	            isRegisteredState: isRegisteredState,
 	            isRegisteredUrl: isRegisteredUrl,
-	            onUrlChange: onUrlChange,
 	            start: start
 	        };
 
@@ -1626,7 +1668,7 @@
 	    }
 
 	    module.exports = Module;
-	}(window.jQuery));
+	}(window.Ractive));
 
 
 /***/ },
@@ -1638,7 +1680,7 @@
 	 */
 	/*global module*/
 	/*jslint plusplus:true*/
-	(function () {
+	(function (Ractive) {
 	    'use strict';
 
 	    function $Injector() {
@@ -1695,7 +1737,7 @@
 
 	        function queueOrGet(name, func) {
 	            if (!modules[name]) {
-	                if (!invoke.get) {
+	                if (!invoke.hasOwnProperty('get')) {
 	                    throw "Injector.get has not defined";
 	                }
 	                modules[name] = {};
@@ -1708,8 +1750,8 @@
 	                        modules[name] = {
 	                            o: o
 	                        };
+	                        func();
 	                    }
-	                    func();
 	                });
 	            } else {
 	                if (modules[name].o !== undefined) {
@@ -1746,7 +1788,8 @@
 	            var args = arguments,
 	                info,
 	                target,
-	                obj = {};
+	                obj = {},
+	                copy;
 
 	            if (typeof args[0] === 'string') {
 	                obj.n = args[0];
@@ -1761,8 +1804,9 @@
 	                obj.d = getFuncArgs(info);
 	                obj.c = info;
 	            } else {
-	                obj.c = info.pop();
-	                obj.d = info;
+	                copy = info.slice(0);
+	                obj.c = copy.pop();
+	                obj.d = copy;
 	            }
 
 	            if (obj.n) {
@@ -1777,20 +1821,22 @@
 	                modules[obj.n] = obj;
 	            }
 
-	            function dependencyResolver(dependency, callback) {
-	                queueOrGet(dependency, function () {
-	                    callback(modules[dependency].o);
-	                });
-	            }
+	            return new Ractive.Promise(function (resolve, reject) {
+	                var dependencyResolver = function (dependency, callback) {
+	                        queueOrGet(dependency, function () {
+	                            callback(modules[dependency].o);
+	                        });
+	                    },
+	                    execute = function (loadedDependencies) {
+	                        obj.o = obj.c.apply(obj.s, loadedDependencies);
+	                        resolve();
+	                        if (obj.n) {
+	                            runQueue(obj.n);
+	                        }
+	                    };
 
-	            function execute(loadedDependencies) {
-	                obj.o = obj.c.apply(obj.s, loadedDependencies);
-	                if (obj.n) {
-	                    runQueue(obj.n);
-	                }
-	            }
-
-	            asyncMap(obj.d, dependencyResolver, execute);
+	                asyncMap(obj.d, dependencyResolver, execute);
+	            });
 	        };
 
 	        invoke.clear = function (name) {
@@ -1812,8 +1858,7 @@
 	    }
 
 	    module.exports = $Injector;
-	}());
-
+	}(window.Ractive));
 
 /***/ },
 /* 20 */
@@ -1836,6 +1881,55 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
+	(function ($) {
+	    'use strict';
+
+	    function $ScriptLoader() {
+	        var defaultPath = '',
+	            defaultFormat = '.js';
+
+	        function getDefaultPath() {
+	            return defaultPath;
+	        }
+
+	        function setDefaultPath(path) {
+	            defaultPath = path;
+	        }
+
+	        function getDefaultFormat() {
+	            return defaultFormat;
+	        }
+
+	        function setDefaultFormat(format) {
+	            defaultFormat = format;
+	        }
+
+	        function formatPath(path) {
+	            return defaultPath + path + defaultFormat;
+	        }
+
+	        function load(path) {
+	            $.getScript(formatPath(path));
+	        }
+
+	        return {
+	            getDefaultPath: getDefaultPath,
+	            setDefaultPath: setDefaultPath,
+	            getDefaultFormat: getDefaultFormat,
+	            setDefaultFormat: setDefaultFormat,
+	            load: load
+	        };
+	    }
+
+	    module.exports = $ScriptLoader;
+	}(window.jQuery));
+
+
+/***/ },
+/* 22 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module, require*/
 	(function () {
 	    'use strict';
 
@@ -1846,18 +1940,24 @@
 	        var instance,
 	            serverAddress = '',
 	            defaultParams,
+	            interceptors = {
+	                beforeSend: [],
+	                error: [],
+	                success: [],
+	                complete: []
+	            },
 
 	            prepareUrl = function (location) {
 	                return serverAddress + location;
-	            },
+	            };
 
-	            error = function () {
-	                throw "Server Error";
-	            },
+	        function error() {
+	            throw "Server Error";
+	        }
 
-	            beforeSend = function () {},
+	        function beforeSend() {}
 
-	            complete = function () {};
+	        function complete() {}
 
 	        function setDefaultParams(params) {
 	            defaultParams = params;
@@ -1875,13 +1975,44 @@
 	            serverAddress = address;
 	        }
 
+	        function registerInterceptor(phase, interceptor) {
+	            phase = phase || 'success';
+	            if (!interceptors[phase]) {
+	                interceptors[phase] = [];
+	            }
+	            interceptors[phase].push(interceptor);
+	        }
+
+	        function createInterceptFunc(userFunc, phase) {
+	            return function (response) {
+	                var i;
+	                for (i = 0; i < interceptors[phase].length; i += 1) {
+	                    interceptors[phase][i](response);
+	                }
+	                if (userFunc) {
+	                    userFunc(response);
+	                }
+	            };
+	        }
+
+	        function createInterceptors(params) {
+	            params.beforeSend = createInterceptFunc(params.beforeSend, 'beforeSend');
+	            params.error = createInterceptFunc(params.error, 'error');
+	            params.success = createInterceptFunc(params.success, 'success');
+	            params.complete = createInterceptFunc(params.complete, 'complete');
+
+	            return params;
+	        }
+
 	        function run(params) {
 	            var url = params.url || '';
 	            params.url = instance.prepareUrl(url);
 
 	            params = extend({}, defaultParams, params);
 
-	            $ajax(params);
+	            params = createInterceptors(params);
+
+	            return $ajax(params);
 	        }
 
 	        function get(url, callback) {
@@ -1891,7 +2022,9 @@
 	                success: callback
 	            });
 
-	            $ajax(params);
+	            params = createInterceptors(params);
+
+	            return $ajax(params);
 	        }
 
 	        instance = {
@@ -1900,18 +2033,13 @@
 	            getDefaultParams: getDefaultParams,
 	            setDefaultParams: setDefaultParams,
 	            prepareUrl: prepareUrl,
-	            error: error,
-	            beforeSend: beforeSend,
-	            complete: complete,
 	            request: run,
-	            get: get
+	            get: get,
+	            registerInterceptor: registerInterceptor
 	        };
 
 	        defaultParams = {
 	            dataType: "json",
-	            beforeSend: instance.beforeSend,
-	            complete: instance.complete,
-	            error: instance.error,
 	            cache: false
 	        };
 
@@ -1923,22 +2051,22 @@
 
 
 /***/ },
-/* 22 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($, Ractive) {
+	(function (Ractive) {
 	    'use strict';
 	    var helpers = __webpack_require__(4),
 	        extend = helpers.extend,
 	        isString = helpers.isString,
-	        loaderProvider = __webpack_require__(26),
-	        partialProvider = __webpack_require__(27),
-	        componentProvider = __webpack_require__(28);
+	        templateLoaderProvider = __webpack_require__(27),
+	        partialProvider = __webpack_require__(28),
+	        componentProvider = __webpack_require__(29);
 
-	    function $TemplateProvider() {
+	    function $TemplateProvider($ajax) {
 	        var instance,
-	            loader = loaderProvider(),
+	            loader = templateLoaderProvider($ajax),
 	            partialManager = partialProvider(loader),
 	            componentManager = componentProvider(),
 	            components = {},
@@ -1966,7 +2094,7 @@
 	                    doneWithPartials = true,
 	                    doneWithComponents = true;
 
-	                options.template = template;
+	                options.template = template || '';
 	                delete options.el;
 	                delete options.controller;
 	                delete options.serverLink;
@@ -2047,36 +2175,81 @@
 	    }
 
 	    module.exports = $TemplateProvider;
-	}(window.jQuery, window.Ractive));
+	}(window.Ractive));
+
 
 /***/ },
-/* 23 */
+/* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function () {
+	(function (Ractive) {
 	    'use strict';
 	    var helpers = __webpack_require__(4),
 	        isFunction = helpers.isFunction,
 	        isArray = helpers.isArray;
 
-	    function $ControllerProvider($injector) {
+	    function $ControllerProvider($injector, $scriptLoader) {
 	        var instance,
-	            controllers = {};
+	            controllers = {},
+	            resolve,
+
+	            registerQueue = {};
+
+	        function resolveSingleQueue(controller) {
+	            resolve(controller.name, controller.scope).then(function () {
+	                if (controller.callback) {
+	                    controller.callback();
+	                }
+	            });
+	        }
+
+	        function resolveRegisterQueue(name) {
+	            if (registerQueue[name]) {
+	                var i, controller;
+	                for (i = 0; i < registerQueue[name].length; i += 1) {
+	                    controller = registerQueue[name][i];
+	                    resolveSingleQueue(controller);
+	                }
+	                delete registerQueue[name];
+	            }
+	        }
 
 	        function register(name, constructor) {
 	            controllers[name] = constructor;
 
+	            resolveRegisterQueue(name);
+
 	            return instance;
 	        }
 
-	        function resolve(controller, scope) {
-	            if (isFunction(controller) || isArray(controller)) {
-	                $injector(controller, scope);
-	            } else if (controllers[controller]) {
-	                $injector(controllers[controller], scope);
+	        function putOnRegisterQueue(name, scope, callback) {
+	            if (!registerQueue[name]) {
+	                registerQueue[name] = [];
 	            }
+	            registerQueue[name].push({
+	                name: name,
+	                scope: scope,
+	                callback: callback
+	            });
 	        }
+
+	        resolve = function (controller, scope, path) {
+	            return new Ractive.Promise(function (resolve, reject) {
+	                if (isFunction(controller) || isArray(controller)) {
+	                    $injector(controller, scope).then(function () {
+	                        resolve();
+	                    });
+	                } else if (controllers[controller]) {
+	                    $injector(controllers[controller], scope).then(function () {
+	                        resolve();
+	                    });
+	                } else if (path) {
+	                    $scriptLoader.load(path);
+	                    putOnRegisterQueue(controller, scope, resolve);
+	                }
+	            });
+	        };
 
 	        instance = {
 	            register: register,
@@ -2087,23 +2260,24 @@
 	    }
 
 	    module.exports = $ControllerProvider;
-	}());
-
+	}(window.Ractive));
 
 /***/ },
-/* 24 */
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
 	(function () {
 	    'use strict';
 
-	    function $UrlResolver() {
+	    function $RouteResolver() {
+	        var registered = {};
+
 	        function escapeGroup(group) {
 	            return group.replace(/([=!:$\/()])/g, '\\$1');
 	        }
 
-	        function createUrlObject(path) {
+	        function pathToRegexp(path) {
 	            var keys = [],
 	                index = 0,
 	                PATH_REGEXP = new RegExp([
@@ -2183,41 +2357,59 @@
 	            return matchedObject;
 	        }
 
-	        function replaceUrl(params, url) {
-	            var key;
+	        function resolve(url) {
+	            var key, params, urlObject;
 
-	            for (key in params) {
-	                if (params.hasOwnProperty(key)) {
-	                    url = url.replace('{' + key + '}', params[key]);
+	            for (key in registered) {
+	                if (registered.hasOwnProperty(key)) {
+	                    urlObject = registered[key];
+
+	                    if (urlObject.regExp.test(url)) {
+	                        params = extractParams(urlObject, url);
+	                        urlObject.params = params;
+	                        return urlObject;
+	                    }
 	                }
-	            }
-	            return url;
-	        }
-
-	        function resolve(urlObject, url) {
-	            if (urlObject.regExp.test(url)) {
-	                var params = extractParams(urlObject, url);
-	                return {
-	                    ulr: replaceUrl(params, url),
-	                    params: params
-	                };
 	            }
 	            return null;
 	        }
 
+	        function register(url, stateName, statePath) {
+	            var reg = pathToRegexp(url);
+	            registered[url] = {
+	                url: url,
+	                stateName: stateName,
+	                statePath: statePath,
+	                regExp: reg.regExp,
+	                keys: reg.keys
+	            };
+	        }
+
+	        function isRegistered(url) {
+	            var key;
+	            for (key in registered) {
+	                if (registered.hasOwnProperty(key)) {
+	                    if (registered[key].regExp.test(url)) {
+	                        return true;
+	                    }
+	                }
+	            }
+	            return false;
+	        }
+
 	        return {
-	            createUrlObject: createUrlObject,
+	            register: register,
 	            resolve: resolve,
-	            replaceUrl: replaceUrl
+	            isRegistered: isRegistered
 	        };
 	    }
 
-	    module.exports = $UrlResolver;
+	    module.exports = $RouteResolver;
 	}());
 
 
 /***/ },
-/* 25 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
@@ -2227,26 +2419,75 @@
 	    var helpers = __webpack_require__(4),
 	        isDefined = helpers.isDefined;
 
-	    function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $urlResolver) {
+	    function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $scriptLoader) {
 	        var instance,
 	            states = {},
-	            currentStateTree = [];
+	            currentStateTree = [],
+	            lastUrl = '',
+	            loadingState = false,
+	            stateQueue = [],
+	            stateRegisterQueue = [],
+	            statePaths = {},
+	            listeners = {
+	                beforeLoad: [],
+	                afterLoad: []
+	            },
+
+	            resolveState;
+
+	        function resolveRegisterQueue() {
+	            loadingState = false;
+	            if (stateRegisterQueue.length) {
+	                var state = stateRegisterQueue.shift();
+	                resolveState(state.name, state.params);
+	            }
+	        }
+
+	        function registerPath(name, path) {
+	            statePaths[name] = path;
+	        }
 
 	        function register(name, def) {
-	            if (def.url) {
-	                def.urlObject = $urlResolver.createUrlObject(def.url);
-	            }
 	            if (def.dataUrl) {
 	                def.dataUrlFormat = def.dataUrl;
 	            }
 	            states[name] = def;
 
+	            resolveRegisterQueue();
+
 	            return instance;
 	        }
 
-	        function updateDataUrl(name, params) {
-	            if (states[name]) {
-	                states[name].dataUrl = $urlResolver.replaceUrl(params, states[name].dataUrlFormat);
+	        function registerListener(phase, listener) {
+	            listeners[phase].push(listener);
+	        }
+
+	        function callListeners(phase) {
+	            var i;
+	            for (i = 0; i < listeners[phase].length; i += 1) {
+	                listeners[phase][i]();
+	            }
+	        }
+
+	        function formatDataUrl(stateDataUrl, params) {
+	            var key, dataUrl = stateDataUrl;
+	            if (dataUrl && params) {
+	                for (key in params) {
+	                    if (params.hasOwnProperty(key)) {
+	                        dataUrl = dataUrl.replace(':' + key, params[key]);
+	                    }
+	                }
+	            }
+	            return dataUrl;
+	        }
+
+	        function resolveQueue() {
+	            loadingState = false;
+	            if (stateQueue.length) {
+	                var state = stateQueue.shift();
+	                resolveState(state.name, state.params, state.path);
+	            } else {
+	                callListeners('afterLoad');
 	            }
 	        }
 
@@ -2261,23 +2502,59 @@
 	                return params;
 	            });
 
-	            $controllerProvider.resolve(state.controller, myTemplate);
-
-	            myTemplate.render(state.el);
+	            if (state.controller) {
+	                $controllerProvider.resolve(state.controller, myTemplate, state.controllerPath).then(function () {
+	                    myTemplate.render(state.el);
+	                    resolveQueue();
+	                });
+	            } else {
+	                myTemplate.render(state.el);
+	                resolveQueue();
+	            }
 	        }
 
-	        function resolveState(name, params) {
+	        function putOnQueue(name, params, path) {
+	            stateQueue.push({
+	                name: name,
+	                params: params,
+	                path: path
+	            });
+	        }
+
+	        function putOnRegisterQueue(name, params) {
+	            stateRegisterQueue.push({
+	                name: name,
+	                params: params
+	            });
+	        }
+
+	        resolveState = function (name, params, statePath) {
 	            if (!states[name]) {
+	                if (statePath) {
+	                    loadingState = true;
+	                    $scriptLoader.load(statePath);
+	                    putOnRegisterQueue(name, params);
+	                } else if (statePaths[name]) {
+	                    loadingState = true;
+	                    $scriptLoader.load(statePaths[name]);
+	                    putOnRegisterQueue(name, params);
+	                }
+	                return;
+	            }
+
+	            if (loadingState) {
+	                putOnQueue(name, params, statePath);
 	                return;
 	            }
 
 	            var state = states[name],
-	                dataUrl = state.dataUrl,
+	                dataUrl = formatDataUrl(state.dataUrl, params),
 	                data = state.data || {},
 	                myTemplate,
 	                completeRequest = false,
 	                completeTemplate = false;
 
+	            loadingState = true;
 	            if (dataUrl) {
 	                $server.get(dataUrl, function (response) {
 	                    data = response;
@@ -2290,6 +2567,7 @@
 	            } else {
 	                completeRequest = true;
 	            }
+
 	            $templateProvider.create(state).then(function (Template) {
 	                myTemplate = new Template();
 
@@ -2298,7 +2576,7 @@
 	                    runState(state, params, myTemplate, data);
 	                }
 	            });
-	        }
+	        };
 
 	        function reload(params) {
 	            var i;
@@ -2309,70 +2587,53 @@
 	            return instance;
 	        }
 
-	        function go(name, params) {
-	            if (!states[name]) {
-	                return;
-	            }
-
+	        function go(name, params, statePath) {
 	            var subStates = name.split('.'),
 	                diferentTree = false,
 	                fullStateName = '',
+	                path,
 	                i;
 
+	            callListeners('beforeLoad');
 	            for (i = 0; i < subStates.length; i += 1) {
 	                fullStateName += subStates[i];
 
-	                if (subStates[i] !== currentStateTree[i] || diferentTree) {
+	                if (subStates[i] !== currentStateTree[i] || diferentTree || i === (subStates.length - 1)) {
 	                    diferentTree = true;
-	                    resolveState(fullStateName, params);
+	                    path = i === (subStates.length - 1) ? statePath : null;
+	                    putOnQueue(fullStateName, params, statePath);
 	                }
 
 	                fullStateName += '.';
 	            }
 	            currentStateTree = subStates;
+	            resolveQueue();
 
 	            return instance;
 	        }
 
-	        function findByUrl(url) {
-	            var key, state, urlMatch;
-
-	            for (key in states) {
-	                if (states.hasOwnProperty(key) && states[key].url) {
-	                    urlMatch = $urlResolver.resolve(states[key].urlObject, url);
-	                    if (urlMatch) {
-	                        urlMatch.stateName = key;
-	                        return urlMatch;
-	                    }
-	                }
-	            }
-	            return null;
-	        }
-
-	        function goToUrl(url) {
-	            var found = findByUrl(url);
-
-	            if (found) {
-	                updateDataUrl(found.stateName, found.params);
-	                go(found.stateName, found.params);
-	            }
-	        }
 
 	        function isRegisteredState(name) {
 	            return isDefined(states[name]);
 	        }
 
-	        function isRegisteredUrl(url) {
-	            return findByUrl(url) !== null;
+	        function clearCurrentStateTree() {
+	            currentStateTree = [];
+	        }
+
+	        function setCurrentStateTree(tree) {
+	            currentStateTree = tree;
 	        }
 
 	        instance = {
 	            register: register,
+	            registerPath: registerPath,
 	            go: go,
 	            reload: reload,
 	            isRegisteredState: isRegisteredState,
-	            isRegisteredUrl: isRegisteredUrl,
-	            goToUrl: goToUrl
+	            clearCurrentStateTree: clearCurrentStateTree,
+	            setCurrentStateTree: setCurrentStateTree,
+	            registerListener: registerListener
 	        };
 
 	        return instance;
@@ -2383,14 +2644,14 @@
 
 
 /***/ },
-/* 26 */
+/* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($, Ractive) {
+	(function (Ractive) {
 	    'use strict';
 
-	    function LoaderProvider() {
+	    function TemplateLoaderProvider($ajax) {
 	        var templatePath = '',
 	            templateFormat = '',
 	            cache = {},
@@ -2425,7 +2686,7 @@
 	         */
 	        function getTemplate(path) {
 	            if (deferreds[path] === undefined) {
-	                deferreds[path] = $.ajax({
+	                deferreds[path] = $ajax({
 	                    url: formatTemplateUrl(path),
 	                    dataType: "text",
 	                    cache: ajaxCache,
@@ -2514,15 +2775,16 @@
 	        };
 	    }
 
-	    module.exports = LoaderProvider;
-	}(window.jQuery, window.Ractive));
+	    module.exports = TemplateLoaderProvider;
+	}(window.Ractive));
+
 
 /***/ },
-/* 27 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($, Ractive) {
+	(function (Ractive) {
 	    'use strict';
 
 	    function PartialProvider(loaderRef) {
@@ -2614,14 +2876,15 @@
 	    }
 
 	    module.exports = PartialProvider;
-	}(window.jQuery, window.Ractive));
+	}(window.Ractive));
+
 
 /***/ },
-/* 28 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
-	(function ($, Ractive) {
+	(function (Ractive) {
 	    'use strict';
 
 	    function ComponentProvider() {
@@ -2704,7 +2967,8 @@
 	    }
 
 	    module.exports = ComponentProvider;
-	}(window.jQuery, window.Ractive));
+	}(window.Ractive));
+
 
 /***/ }
 /******/ ]);

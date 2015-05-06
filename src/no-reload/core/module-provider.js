@@ -1,5 +1,5 @@
 /*global module, require*/
-(function ($) {
+(function () {
     'use strict';
     var moduleFactory = require('./module'),
 
@@ -13,4 +13,4 @@
         };
 
     module.exports = moduleProvider;
-}(window.jQuery));
+}());

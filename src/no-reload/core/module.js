@@ -1,38 +1,47 @@
 /*global module, require*/
-(function ($) {
+(function (Ractive) {
     'use strict';
     var $Injector = require('./injector'),
         $Ajax = require('../remote/ajax'),
+        $ScriptLoader = require('../remote/script-loader'),
         $Server = require('../remote/server'),
         $TemplateProvider = require('../template/template-provider'),
         $ControllerProvider = require('./controller-provider'),
-        $UrlResolver = require('./url-resolver'),
-        $StateProvider = require('./state-provider');
+        $RouteResolver = require('./route-resolver'),
+        $StateProvider = require('./state-provider'),
+        helpers = require('../helpers'),
+        isString = helpers.isString,
+        isFunction = helpers.isFunction,
+        isArray = helpers.isArray;
 
-    function Module(deps) {
+    function Module() {
         var instance,
             $injector = $Injector(),
+            $scriptLoader = $ScriptLoader(),
             configs = [],
-            runnables = [],
+            runnables = [];
 
-            onUrlChange;
+        $injector.get = $scriptLoader.load;
 
         $injector("$injector", function () {
             return $injector;
+        });
+        $injector("$scriptLoader", function () {
+            return $scriptLoader;
         });
 
         $injector("$ajax", $Ajax);
         $injector("$server", $Server);
         $injector("$controllerProvider", $ControllerProvider);
         $injector("$templateProvider", $TemplateProvider);
-        $injector("$urlResolver", $UrlResolver);
+        $injector("$routeResolver", $RouteResolver);
         $injector("$stateProvider", $StateProvider);
 
         function factory(name, constructor) {
-            if (typeof name !== 'string') {
+            if (!isString(name)) {
                 throw 'invalid service name';
             }
-            if (typeof constructor !== 'function') {
+            if (!isFunction(constructor) && !isArray(constructor)) {
                 throw 'invalid service constructor';
             }
 
@@ -73,17 +82,35 @@
             return instance;
         }
 
-        function go(state, params) {
+        function route(url, stateName, statePath) {
+            if (!url) {
+                $injector(function ($stateProvider) {
+                    $stateProvider.registerPath(stateName, statePath);
+                });
+            } else {
+                $injector(function ($routeResolver) {
+                    $routeResolver.register(url, stateName, statePath);
+                });
+            }
+
+            return instance;
+        }
+
+        function go(state, params, stateDepsPaths) {
             $injector(function ($stateProvider) {
-                $stateProvider.go(state, params);
+                $stateProvider.go(state, params, stateDepsPaths);
             });
 
             return instance;
         }
 
         function goToUrl(url) {
-            $injector(function ($stateProvider) {
-                $stateProvider.goToUrl(url);
+            $injector(function ($stateProvider, $routeResolver) {
+                var urlObj = $routeResolver.resolve(url);
+
+                if (urlObj) {
+                    $stateProvider.go(urlObj.stateName, urlObj.params, urlObj.statePath);
+                }
             });
 
             return instance;
@@ -95,25 +122,43 @@
         }
 
         function isRegisteredUrl(url) {
-            var $stateProvider = $injector.getDependency('$stateProvider');
-            return $stateProvider.isRegisteredUrl(url);
+            var $routeResolver = $injector.getDependency('$routeResolver');
+            return $routeResolver.isRegistered(url);
         }
 
         function config(func) {
             configs.push(func);
-            return instance;
-        }
 
-        function run(func) {
-            runnables.push(func);
             return instance;
         }
 
         function configPhase() {
-            var i;
-            for (i = 0; i < configs.length; i += 1) {
-                $injector(configs[i]);
-            }
+            return new Ractive.Promise(function (resolve, reject) {
+                if (configs.length === 0) {
+                    resolve();
+                }
+                var i,
+                    pendents = configs.length,
+
+                    execOne = function (i) {
+                        $injector(configs[i]).then(function () {
+                            pendents -= 1;
+
+                            if (!pendents) {
+                                resolve();
+                            }
+                        });
+                    };
+                for (i = 0; i < configs.length; i += 1) {
+                    execOne(i);
+                }
+            });
+        }
+
+        function run(func) {
+            runnables.push(func);
+
+            return instance;
         }
 
         function runPhase() {
@@ -123,28 +168,25 @@
             }
         }
 
-        onUrlChange = function (url) {
-            goToUrl(url);
-        };
-
         function start() {
-            configPhase();
-            runPhase();
+            configPhase().then(function () {
+                runPhase();
+            });
         }
 
         instance = {
             factory: factory,
             controller: controller,
             state: state,
+            route: route,
             component: component,
             partial: partial,
             go: go,
             goToUrl: goToUrl,
-            config: config,
             run: run,
+            config: config,
             isRegisteredState: isRegisteredState,
             isRegisteredUrl: isRegisteredUrl,
-            onUrlChange: onUrlChange,
             start: start
         };
 
@@ -152,4 +194,4 @@
     }
 
     module.exports = Module;
-}(window.jQuery));
+}(window.Ractive));

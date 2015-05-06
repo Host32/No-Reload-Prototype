@@ -3,7 +3,7 @@
  */
 /*global module*/
 /*jslint plusplus:true*/
-(function () {
+(function (Ractive) {
     'use strict';
 
     function $Injector() {
@@ -60,7 +60,7 @@
 
         function queueOrGet(name, func) {
             if (!modules[name]) {
-                if (!invoke.get) {
+                if (!invoke.hasOwnProperty('get')) {
                     throw "Injector.get has not defined";
                 }
                 modules[name] = {};
@@ -73,8 +73,8 @@
                         modules[name] = {
                             o: o
                         };
+                        func();
                     }
-                    func();
                 });
             } else {
                 if (modules[name].o !== undefined) {
@@ -111,7 +111,8 @@
             var args = arguments,
                 info,
                 target,
-                obj = {};
+                obj = {},
+                copy;
 
             if (typeof args[0] === 'string') {
                 obj.n = args[0];
@@ -126,8 +127,9 @@
                 obj.d = getFuncArgs(info);
                 obj.c = info;
             } else {
-                obj.c = info.pop();
-                obj.d = info;
+                copy = info.slice(0);
+                obj.c = copy.pop();
+                obj.d = copy;
             }
 
             if (obj.n) {
@@ -142,20 +144,22 @@
                 modules[obj.n] = obj;
             }
 
-            function dependencyResolver(dependency, callback) {
-                queueOrGet(dependency, function () {
-                    callback(modules[dependency].o);
-                });
-            }
+            return new Ractive.Promise(function (resolve, reject) {
+                var dependencyResolver = function (dependency, callback) {
+                        queueOrGet(dependency, function () {
+                            callback(modules[dependency].o);
+                        });
+                    },
+                    execute = function (loadedDependencies) {
+                        obj.o = obj.c.apply(obj.s, loadedDependencies);
+                        resolve();
+                        if (obj.n) {
+                            runQueue(obj.n);
+                        }
+                    };
 
-            function execute(loadedDependencies) {
-                obj.o = obj.c.apply(obj.s, loadedDependencies);
-                if (obj.n) {
-                    runQueue(obj.n);
-                }
-            }
-
-            asyncMap(obj.d, dependencyResolver, execute);
+                asyncMap(obj.d, dependencyResolver, execute);
+            });
         };
 
         invoke.clear = function (name) {
@@ -177,4 +181,4 @@
     }
 
     module.exports = $Injector;
-}());
+}(window.Ractive));

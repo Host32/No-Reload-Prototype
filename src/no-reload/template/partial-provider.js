@@ -1,5 +1,5 @@
 /*global module, require*/
-(function ($, Ractive) {
+(function (Ractive) {
     'use strict';
 
     function PartialProvider(loaderRef) {
@@ -91,4 +91,4 @@
     }
 
     module.exports = PartialProvider;
-}(window.jQuery, window.Ractive));
+}(window.Ractive));

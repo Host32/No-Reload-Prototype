@@ -1,16 +1,16 @@
 /*global module, require*/
-(function ($, Ractive) {
+(function (Ractive) {
     'use strict';
     var helpers = require('../helpers'),
         extend = helpers.extend,
         isString = helpers.isString,
-        loaderProvider = require('./loader-provider'),
+        templateLoaderProvider = require('./template-loader-provider'),
         partialProvider = require('./partial-provider'),
         componentProvider = require('./component-provider');
 
-    function $TemplateProvider() {
+    function $TemplateProvider($ajax) {
         var instance,
-            loader = loaderProvider(),
+            loader = templateLoaderProvider($ajax),
             partialManager = partialProvider(loader),
             componentManager = componentProvider(),
             components = {},
@@ -38,7 +38,7 @@
                     doneWithPartials = true,
                     doneWithComponents = true;
 
-                options.template = template;
+                options.template = template || '';
                 delete options.el;
                 delete options.controller;
                 delete options.serverLink;
@@ -119,4 +119,4 @@
     }
 
     module.exports = $TemplateProvider;
-}(window.jQuery, window.Ractive));
+}(window.Ractive));

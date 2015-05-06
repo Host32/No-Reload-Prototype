@@ -1,8 +1,8 @@
 /*global module, require*/
-(function ($, Ractive) {
+(function (Ractive) {
     'use strict';
 
-    function LoaderProvider() {
+    function TemplateLoaderProvider($ajax) {
         var templatePath = '',
             templateFormat = '',
             cache = {},
@@ -37,7 +37,7 @@
          */
         function getTemplate(path) {
             if (deferreds[path] === undefined) {
-                deferreds[path] = $.ajax({
+                deferreds[path] = $ajax({
                     url: formatTemplateUrl(path),
                     dataType: "text",
                     cache: ajaxCache,
@@ -126,5 +126,5 @@
         };
     }
 
-    module.exports = LoaderProvider;
-}(window.jQuery, window.Ractive));
+    module.exports = TemplateLoaderProvider;
+}(window.Ractive));
