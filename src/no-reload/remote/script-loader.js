@@ -5,8 +5,8 @@
     function $ScriptLoader() {
         var defaultPath = '',
             defaultFormat = '.js',
-            ajaxCache = true,
-            ajaxIfModified = false;
+            ajaxCache = false,
+            ajaxIfModified = true;
 
         function getDefaultPath() {
             return defaultPath;
