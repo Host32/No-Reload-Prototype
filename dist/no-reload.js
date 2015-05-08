@@ -64,8 +64,8 @@
 	(function () {
 	    'use strict';
 
-	    var appProvider = __webpack_require__(13),
-	        helpers = __webpack_require__(14);
+	    var appProvider = __webpack_require__(3),
+	        helpers = __webpack_require__(4);
 
 	    module.exports = helpers.extend({}, {
 	        app: appProvider
@@ -81,16 +81,16 @@
 	(function () {
 	    'use strict';
 
-	    var Ajax = __webpack_require__(3),
-	        Routes = __webpack_require__(4),
-	        Modules = __webpack_require__(5),
-	        Templates = __webpack_require__(6),
-	        WebSockets = __webpack_require__(7),
-	        Events = __webpack_require__(8),
-	        Forms = __webpack_require__(9),
-	        Intervals = __webpack_require__(10),
-	        Timeouts = __webpack_require__(11),
-	        Prompt = __webpack_require__(12),
+	    var Ajax = __webpack_require__(5),
+	        Routes = __webpack_require__(6),
+	        Modules = __webpack_require__(7),
+	        Templates = __webpack_require__(8),
+	        WebSockets = __webpack_require__(9),
+	        Events = __webpack_require__(10),
+	        Forms = __webpack_require__(11),
+	        Intervals = __webpack_require__(12),
+	        Timeouts = __webpack_require__(13),
+	        Prompt = __webpack_require__(14),
 
 	        /**
 	         * NoReload core class
@@ -321,6 +321,96 @@
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
+	/*global module, require*/
+	(function () {
+	    'use strict';
+	    var helpers = __webpack_require__(4),
+	        moduleProvider = __webpack_require__(15);
+
+	    module.exports = moduleProvider;
+	}());
+
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*global module*/
+	(function ($) {
+	    'use strict';
+
+	    function toInt(str) {
+	        return parseInt(str, 10);
+	    }
+
+	    function isString(value) {
+	        return typeof value === 'string';
+	    }
+
+	    function isNumber(value) {
+	        return typeof value === 'number';
+	    }
+
+	    function isDefined(value) {
+	        return typeof value !== 'undefined';
+	    }
+
+	    function isUndefined(value) {
+	        return typeof value === 'undefined';
+	    }
+
+	    function isObject(value) {
+	        return value !== null && typeof value === 'object';
+	    }
+
+	    function isWindow(obj) {
+	        return obj && obj.window === obj;
+	    }
+
+	    function isNull(value) {
+	        return value === null;
+	    }
+
+	    function isNonNull(value) {
+	        return value !== null;
+	    }
+
+	    function isFunction(value) {
+	        return typeof value === 'function';
+	    }
+
+	    function isBoolean(value) {
+	        return typeof value === 'boolean';
+	    }
+
+	    function isArray(value) {
+	        return Array.isArray(value);
+	    }
+
+	    function extend() {
+	        return $.extend.apply($, arguments);
+	    }
+
+	    module.exports = {
+	        toInt: toInt,
+	        isString: isString,
+	        isNumber: isNumber,
+	        isDefined: isDefined,
+	        isUndefined: isUndefined,
+	        isObject: isObject,
+	        isFunction: isFunction,
+	        isBoolean: isBoolean,
+	        isArray: isArray,
+	        extend: extend
+	    };
+
+	}(window.jQuery));
+
+
+/***/ },
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
 	/**
 	 * Ajax
 	 * @param {Object} NR - NoReload
@@ -378,7 +468,7 @@
 
 
 /***/ },
-/* 4 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -556,7 +646,7 @@
 
 
 /***/ },
-/* 5 */
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -637,7 +727,7 @@
 
 
 /***/ },
-/* 6 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -834,7 +924,7 @@
 
 
 /***/ },
-/* 7 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module*/
@@ -844,7 +934,7 @@
 
 
 /***/ },
-/* 8 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -913,12 +1003,12 @@
 
 
 /***/ },
-/* 9 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global require*/
-	var Validate = __webpack_require__(15);
-	var Mask = __webpack_require__(16);
+	var Validate = __webpack_require__(16);
+	var Mask = __webpack_require__(17);
 	var Forms = function ($, NR, Ractive, prompt) {
 	    'use strict';
 	    var forms = this,
@@ -999,7 +1089,7 @@
 
 
 /***/ },
-/* 10 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Intervals = function () {
@@ -1036,7 +1126,7 @@
 
 
 /***/ },
-/* 11 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Timeouts = function () {
@@ -1073,7 +1163,7 @@
 
 
 /***/ },
-/* 12 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Prompt = function () {
@@ -1101,97 +1191,29 @@
 
 
 /***/ },
-/* 13 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*global module, require*/
 	(function () {
 	    'use strict';
-	    var helpers = __webpack_require__(14),
-	        moduleProvider = __webpack_require__(17);
+	    var moduleFactory = __webpack_require__(18),
+
+	        modules = {},
+
+	        moduleProvider = function (name, deps) {
+	            if (!modules[name]) {
+	                modules[name] = moduleFactory(deps);
+	            }
+	            return modules[name];
+	        };
 
 	    module.exports = moduleProvider;
 	}());
 
 
 /***/ },
-/* 14 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/*global module*/
-	(function ($) {
-	    'use strict';
-
-	    function toInt(str) {
-	        return parseInt(str, 10);
-	    }
-
-	    function isString(value) {
-	        return typeof value === 'string';
-	    }
-
-	    function isNumber(value) {
-	        return typeof value === 'number';
-	    }
-
-	    function isDefined(value) {
-	        return typeof value !== 'undefined';
-	    }
-
-	    function isUndefined(value) {
-	        return typeof value === 'undefined';
-	    }
-
-	    function isObject(value) {
-	        return value !== null && typeof value === 'object';
-	    }
-
-	    function isWindow(obj) {
-	        return obj && obj.window === obj;
-	    }
-
-	    function isNull(value) {
-	        return value === null;
-	    }
-
-	    function isNonNull(value) {
-	        return value !== null;
-	    }
-
-	    function isFunction(value) {
-	        return typeof value === 'function';
-	    }
-
-	    function isBoolean(value) {
-	        return typeof value === 'boolean';
-	    }
-
-	    function isArray(value) {
-	        return Array.isArray(value);
-	    }
-
-	    function extend() {
-	        return $.extend.apply($, arguments);
-	    }
-
-	    module.exports = {
-	        toInt: toInt,
-	        isString: isString,
-	        isNumber: isNumber,
-	        isDefined: isDefined,
-	        isUndefined: isUndefined,
-	        isObject: isObject,
-	        isFunction: isFunction,
-	        isBoolean: isBoolean,
-	        isArray: isArray,
-	        extend: extend
-	    };
-
-	}(window.jQuery));
-
-
-/***/ },
-/* 15 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Validate = function ($, prompt) {
@@ -1392,7 +1414,7 @@
 
 
 /***/ },
-/* 16 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var Mask = function ($) {
@@ -1447,28 +1469,6 @@
 
 
 /***/ },
-/* 17 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/*global module, require*/
-	(function () {
-	    'use strict';
-	    var moduleFactory = __webpack_require__(18),
-
-	        modules = {},
-
-	        moduleProvider = function (name, deps) {
-	            if (!modules[name]) {
-	                modules[name] = moduleFactory(deps);
-	            }
-	            return modules[name];
-	        };
-
-	    module.exports = moduleProvider;
-	}());
-
-
-/***/ },
 /* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -1483,7 +1483,7 @@
 	        $ControllerProvider = __webpack_require__(24),
 	        $RouteResolver = __webpack_require__(25),
 	        $StateProvider = __webpack_require__(26),
-	        helpers = __webpack_require__(14),
+	        helpers = __webpack_require__(4),
 	        isString = helpers.isString,
 	        isFunction = helpers.isFunction,
 	        isArray = helpers.isArray;
@@ -1888,7 +1888,8 @@
 	    function $ScriptLoader() {
 	        var defaultPath = '',
 	            defaultFormat = '.js',
-	            ajaxCache = true;
+	            ajaxCache = true,
+	            ajaxIfModified = false;
 
 	        function getDefaultPath() {
 	            return defaultPath;
@@ -1914,6 +1915,7 @@
 	            $.ajax({
 	                dataType: "script",
 	                cache: ajaxCache,
+	                ifModified: ajaxIfModified,
 	                url: formatPath(path)
 	            });
 	        }
@@ -1922,13 +1924,18 @@
 	            ajaxCache = cache;
 	        }
 
+	        function setIfModified(ifModified) {
+	            ajaxIfModified = ifModified;
+	        }
+
 	        return {
 	            getDefaultPath: getDefaultPath,
 	            setDefaultPath: setDefaultPath,
 	            getDefaultFormat: getDefaultFormat,
 	            setDefaultFormat: setDefaultFormat,
 	            load: load,
-	            setCache: setCache
+	            setCache: setCache,
+	            setIfModified: setIfModified
 	        };
 	    }
 
@@ -1943,7 +1950,7 @@
 	(function () {
 	    'use strict';
 
-	    var helpers = __webpack_require__(14),
+	    var helpers = __webpack_require__(4),
 	        extend = helpers.extend;
 
 	    function $Server($ajax) {
@@ -2065,7 +2072,7 @@
 	/*global module, require*/
 	(function (Ractive) {
 	    'use strict';
-	    var helpers = __webpack_require__(14),
+	    var helpers = __webpack_require__(4),
 	        extend = helpers.extend,
 	        isString = helpers.isString,
 	        templateLoaderProvider = __webpack_require__(27),
@@ -2193,7 +2200,7 @@
 	/*global module, require*/
 	(function (Ractive) {
 	    'use strict';
-	    var helpers = __webpack_require__(14),
+	    var helpers = __webpack_require__(4),
 	        isFunction = helpers.isFunction,
 	        isArray = helpers.isArray;
 
@@ -2425,7 +2432,7 @@
 	(function () {
 	    'use strict';
 
-	    var helpers = __webpack_require__(14),
+	    var helpers = __webpack_require__(4),
 	        isDefined = helpers.isDefined;
 
 	    function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $scriptLoader) {
