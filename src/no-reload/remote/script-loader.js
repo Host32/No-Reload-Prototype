@@ -5,8 +5,7 @@
     function $ScriptLoader() {
         var defaultPath = '',
             defaultFormat = '.js',
-            ajaxCache = false,
-            ajaxIfModified = true;
+            ajaxCache = true;
 
         function getDefaultPath() {
             return defaultPath;
@@ -32,7 +31,6 @@
             $.ajax({
                 dataType: "script",
                 cache: ajaxCache,
-                ifModified: ajaxIfModified,
                 url: formatPath(path)
             });
         }
@@ -40,19 +38,13 @@
         function setCache(cache) {
             ajaxCache = cache;
         }
-
-        function setIfModified(ifModified) {
-            ajaxIfModified = ifModified;
-        }
-
         return {
             getDefaultPath: getDefaultPath,
             setDefaultPath: setDefaultPath,
             getDefaultFormat: getDefaultFormat,
             setDefaultFormat: setDefaultFormat,
             load: load,
-            setCache: setCache,
-            setIfModified: setIfModified
+            setCache: setCache
         };
     }
 
