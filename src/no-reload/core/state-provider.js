@@ -3,14 +3,15 @@
     'use strict';
 
     var helpers = require('../helpers'),
+        Promise = require('./promise'),
         isDefined = helpers.isDefined;
 
-    function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $scriptLoader) {
+    function $StateProvider($injector, $templateProvider, $controllerProvider, $server, $scriptLoader, $routeResolver) {
         var instance,
             states = {},
+            registerQueue = {},
             currentStateTree = [],
             lastUrl = '',
-            loadingState = false,
             stateQueue = [],
             stateRegisterQueue = [],
             statePaths = {},
@@ -21,11 +22,31 @@
 
             resolveState;
 
-        function resolveRegisterQueue() {
-            loadingState = false;
-            if (stateRegisterQueue.length) {
-                var state = stateRegisterQueue.shift();
-                resolveState(state.name, state.params);
+        function getState(name, statePath) {
+            return new Promise(function (resolve, reject) {
+                if (!states[name]) {
+                    if (statePath) {
+                        if (!registerQueue[name]) {
+                            registerQueue[name] = [];
+                        }
+                        registerQueue[name].push(resolve);
+                        $scriptLoader.load(statePath);
+                    } else {
+                        reject();
+                    }
+                } else {
+                    resolve(states[name]);
+                }
+            });
+        }
+
+        function resolveRegisterQueue(name) {
+            if (registerQueue[name]) {
+                var key;
+                for (key = 0; key < registerQueue[name].length; key += 1) {
+                    registerQueue[name][key](states[name]);
+                }
+                delete registerQueue[name];
             }
         }
 
@@ -39,7 +60,7 @@
             }
             states[name] = def;
 
-            resolveRegisterQueue();
+            resolveRegisterQueue(name);
 
             return instance;
         }
@@ -68,7 +89,6 @@
         }
 
         function resolveQueue() {
-            loadingState = false;
             if (stateQueue.length) {
                 var state = stateQueue.shift();
                 resolveState(state.name, state.params, state.path);
@@ -115,52 +135,38 @@
         }
 
         resolveState = function (name, params, statePath) {
-            if (!states[name]) {
-                if (statePath) {
-                    loadingState = true;
-                    $scriptLoader.load(statePath);
-                    putOnRegisterQueue(name, params);
-                } else if (statePaths[name]) {
-                    loadingState = true;
-                    $scriptLoader.load(statePaths[name]);
-                    putOnRegisterQueue(name, params);
-                }
-                return;
+            if (!statePath && statePaths[name]) {
+                statePath = statePaths[name];
             }
 
-            if (loadingState) {
-                putOnQueue(name, params, statePath);
-                return;
-            }
+            getState(name, statePath).then(function (state) {
+                var dataUrl = formatDataUrl(state.dataUrl, params),
+                    data = state.data || {},
+                    myTemplate,
+                    completeRequest = false,
+                    completeTemplate = false;
 
-            var state = states[name],
-                dataUrl = formatDataUrl(state.dataUrl, params),
-                data = state.data || {},
-                myTemplate,
-                completeRequest = false,
-                completeTemplate = false;
+                if (dataUrl) {
+                    $server.get(dataUrl, function (response) {
+                        data = response;
 
-            loadingState = true;
-            if (dataUrl) {
-                $server.get(dataUrl, function (response) {
-                    data = response;
-
+                        completeRequest = true;
+                        if (completeTemplate) {
+                            runState(state, params, myTemplate, data);
+                        }
+                    });
+                } else {
                     completeRequest = true;
-                    if (completeTemplate) {
+                }
+
+                $templateProvider.create(state).then(function (Template) {
+                    myTemplate = new Template();
+
+                    completeTemplate = true;
+                    if (completeRequest) {
                         runState(state, params, myTemplate, data);
                     }
                 });
-            } else {
-                completeRequest = true;
-            }
-
-            $templateProvider.create(state).then(function (Template) {
-                myTemplate = new Template();
-
-                completeTemplate = true;
-                if (completeRequest) {
-                    runState(state, params, myTemplate, data);
-                }
             });
         };
 
@@ -187,7 +193,7 @@
                 if (subStates[i] !== currentStateTree[i] || diferentTree || i === (subStates.length - 1)) {
                     diferentTree = true;
                     path = i === (subStates.length - 1) ? statePath : null;
-                    putOnQueue(fullStateName, params, statePath);
+                    putOnQueue(fullStateName, params, path);
                 }
 
                 fullStateName += '.';

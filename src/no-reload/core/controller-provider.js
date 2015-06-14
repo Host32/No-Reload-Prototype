@@ -63,6 +63,8 @@
                 } else if (path) {
                     $scriptLoader.load(path);
                     putOnRegisterQueue(controller, scope, resolve);
+                } else {
+                    putOnRegisterQueue(controller, scope, resolve);
                 }
             });
         };

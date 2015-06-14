@@ -129,9 +129,25 @@
             return false;
         }
 
+        function resolveState(state) {
+            var key, params, urlObject;
+
+            for (key in registered) {
+                if (registered.hasOwnProperty(key)) {
+                    urlObject = registered[key];
+
+                    if (urlObject.stateName === state) {
+                        return urlObject;
+                    }
+                }
+            }
+            return null;
+        }
+
         return {
             register: register,
             resolve: resolve,
+            resolveState: resolveState,
             isRegistered: isRegistered
         };
     }

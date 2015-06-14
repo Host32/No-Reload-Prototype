@@ -88,7 +88,8 @@
                     $stateProvider.registerPath(stateName, statePath);
                 });
             } else {
-                $injector(function ($routeResolver) {
+                $injector(function ($routeResolver, $stateProvider) {
+                    $stateProvider.registerPath(stateName, statePath);
                     $routeResolver.register(url, stateName, statePath);
                 });
             }
